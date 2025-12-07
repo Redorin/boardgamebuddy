@@ -10,7 +10,7 @@ class SignupPage extends StatefulWidget {
 }
 
 class _SignupPageState extends State<SignupPage> {
-  // 💡 CHANGED: Renamed usernameCtrl to emailCtrl
+  // 💡 Now correctly using emailCtrl for Firebase Authentication
   final emailCtrl = TextEditingController(); 
   final passwordCtrl = TextEditingController();
   final confirmPasswordCtrl = TextEditingController();
@@ -20,7 +20,7 @@ class _SignupPageState extends State<SignupPage> {
 
   @override
   void dispose() {
-    emailCtrl.dispose(); // 💡 CHANGED: Dispose emailCtrl
+    emailCtrl.dispose(); 
     passwordCtrl.dispose();
     confirmPasswordCtrl.dispose();
     super.dispose();
@@ -32,7 +32,7 @@ class _SignupPageState extends State<SignupPage> {
       isLoading = true;
     });
 
-    // 1. Client-side Validation (Unchanged)
+    // 1. Client-side Validation
     if (passwordCtrl.text != confirmPasswordCtrl.text) {
         setState(() {
           error = "Passwords do not match!";
@@ -49,10 +49,9 @@ class _SignupPageState extends State<SignupPage> {
       return;
     }
 
-    // 2. Server-side Registration
-    // 💡 CHANGED: Passing emailCtrl.text instead of the old usernameCtrl.text
+    // 2. Server-side Registration (Using Firebase via AuthService)
     bool ok = await AuthService.register(
-      emailCtrl.text, // Now passing the email
+      emailCtrl.text, // Pass the email to the AuthService
       passwordCtrl.text,
     );
 
@@ -60,12 +59,12 @@ class _SignupPageState extends State<SignupPage> {
 
     if (!ok) {
       setState(() {
-        // 💡 CHANGED: Updated error message for email-based registration
-        error = "Registration failed. Email may be invalid or already in use."; 
+        // Updated error message to reflect common Firebase registration errors
+        error = "Registration failed. Email may be invalid, already in use, or password is too weak (min 6 characters)."; 
         isLoading = false;
       });
     } else {
-      // Navigate to Login on success
+      // Success! Redirect to the LoginPage for the user to sign in.
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => LoginPage()),
@@ -79,6 +78,7 @@ class _SignupPageState extends State<SignupPage> {
       backgroundColor: const Color(0xff1B1C1E),
       body: Center(
         child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
           child: Container(
             padding: const EdgeInsets.all(28),
             width: 350,
@@ -104,12 +104,12 @@ class _SignupPageState extends State<SignupPage> {
                 ),
                 const SizedBox(height: 24),
 
-                // 💡 CHANGED: Email Input (previously Username)
+                // Email Input
                 TextField(
-                  controller: emailCtrl, // 💡 CHANGED CONTROLLER
+                  controller: emailCtrl,
                   style: const TextStyle(color: Colors.white),
                   decoration: InputDecoration(
-                    hintText: "Email", // 💡 CHANGED HINT
+                    hintText: "Email", // 💡 Field is now labeled Email
                     hintStyle: const TextStyle(color: Colors.grey),
                     filled: true,
                     fillColor: const Color(0xff3A3C3E),
@@ -121,7 +121,7 @@ class _SignupPageState extends State<SignupPage> {
                 ),
                 const SizedBox(height: 12),
 
-                // Password Input (Unchanged)
+                // Password Input
                 TextField(
                   controller: passwordCtrl,
                   obscureText: true,
@@ -139,7 +139,7 @@ class _SignupPageState extends State<SignupPage> {
                 ),
                 const SizedBox(height: 12),
 
-                // Confirm Password Input (Unchanged)
+                // Confirm Password Input
                 TextField(
                   controller: confirmPasswordCtrl,
                   obscureText: true,
@@ -153,10 +153,10 @@ class _SignupPageState extends State<SignupPage> {
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide.none,
                     ),
-                  ),
+                    ),
                 ),
 
-                // Error Message (Unchanged)
+                // Error Message
                 if (error.isNotEmpty) ...[
                   const SizedBox(height: 12),
                   Text(
@@ -168,7 +168,7 @@ class _SignupPageState extends State<SignupPage> {
 
                 const SizedBox(height: 20),
 
-                // Sign Up Button (Unchanged logic, now using email)
+                // Sign Up Button
                 ElevatedButton(
                   onPressed: isLoading ? null : _handleSignup,
                   style: ElevatedButton.styleFrom(
@@ -193,13 +193,14 @@ class _SignupPageState extends State<SignupPage> {
 
                 const SizedBox(height: 16),
 
-                // Login Link (Unchanged)
+                // Login Link
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const Text("Already have an account? ", style: TextStyle(color: Colors.grey)),
                     GestureDetector(
                       onTap: () {
+                          // Redirect to LoginPage
                           Navigator.pushReplacement(
                           context,
                           MaterialPageRoute(builder: (_) => LoginPage()),
