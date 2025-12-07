@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "527799347898",
+    "project_id": "boardgamebuddy-9ebc3",
+    "storage_bucket": "boardgamebuddy-9ebc3.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:527799347898:android:3277e23591c458c4817083",
+        "android_client_info": {
+          "package_name": "com.example.boardgame"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAmJqiCYFikMwZnYu1lZ8uy5oBzSUowcFI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
