@@ -3,6 +3,20 @@ import 'package:google_fonts/google_fonts.dart';
 import '../services/auth_service.dart';
 import 'signup_page.dart';
 import 'home_page.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
+// The global signIn function is still redundant, but I'll keep it for now.
+// It will be cleaner to put this logic inside AuthService.
+Future<void> signIn(String email, String password) async {
+  try {
+    await FirebaseAuth.instance.signInWithEmailAndPassword(
+      email: email,
+      password: password,
+    );
+  } on FirebaseAuthException catch (e) {
+    print('Login error: ${e.message}');
+  }
+}
 
 class LoginPage extends StatefulWidget {
   @override
@@ -10,24 +24,28 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final TextEditingController usernameCtrl = TextEditingController();
+  // 💡 CHANGED: Renamed usernameCtrl to emailCtrl
+  final TextEditingController emailCtrl = TextEditingController(); 
   final TextEditingController passwordCtrl = TextEditingController();
 
   String error = "";
 
   void handleLogin() async {
+    // 💡 CHANGED: Using emailCtrl.text instead of usernameCtrl.text
     bool ok = await AuthService.login(
-      usernameCtrl.text,
+      emailCtrl.text,
       passwordCtrl.text,
     );
 
     if (!ok) {
-      setState(() => error = "Invalid login.");
+      setState(() => error = "Invalid login credentials.");
     } else {
+      // Passing the email (or what was used to log in) to the home page
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => HomePage(usernameCtrl.text),
+          // 💡 CHANGED: Using emailCtrl.text
+          builder: (context) => HomePage(emailCtrl.text),
         ),
       );
     }
@@ -61,18 +79,19 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 const SizedBox(height: 20),
 
-                // Username
+                // 💡 CHANGED: Email Field (previously Username)
                 Text(
-                  "Username",
+                  "Email", // 💡 CHANGED LABEL
                   style: TextStyle(color: Colors.white70),
                 ),
                 const SizedBox(height: 6),
                 TextField(
-                  controller: usernameCtrl,
+                  controller: emailCtrl, // 💡 CHANGED CONTROLLER
                   style: const TextStyle(color: Colors.white),
                   decoration: InputDecoration(
-                    prefixIcon: const Icon(Icons.mail_outline, color: Colors.grey),
-                    hintText: "Enter username",
+                    // 💡 CHANGED ICON
+                    prefixIcon: const Icon(Icons.email_outlined, color: Colors.grey), 
+                    hintText: "Enter email address", // 💡 CHANGED HINT
                     hintStyle: TextStyle(color: Colors.grey[400]),
                     filled: true,
                     fillColor: const Color(0xff3A3C3E),
@@ -133,7 +152,7 @@ class _LoginPageState extends State<LoginPage> {
 
                 const SizedBox(height: 22),
 
-                // Divider
+                // Divider and Social Buttons (unchanged for brevity)
                 Row(
                   children: const [
                     Expanded(child: Divider(color: Colors.grey)),
@@ -150,7 +169,6 @@ class _LoginPageState extends State<LoginPage> {
 
                 const SizedBox(height: 22),
 
-                // Social Buttons (styled to match dark theme)
                 _socialButton("Google", Icons.circle, Colors.red, () {
                   debugPrint("Login with Google");
                 }),
