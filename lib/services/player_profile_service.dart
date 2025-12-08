@@ -1,27 +1,32 @@
-// lib/services/player_profile_service.dart
+// lib/services/player_profile_service.dart (FIXED)
 import '../pages/player_finder.dart'; 
 import 'dart:math'; 
 import 'package:cloud_firestore/cloud_firestore.dart'; 
-import 'package:geolocator/geolocator.dart'; // <--- NEW IMPORT
+import 'package:geolocator/geolocator.dart'; 
 
 class PlayerProfileService {
 
   static PlayerDisplay createPlayerDisplay(
-      String playerId, List<String> games, 
+      String playerId, 
+      List<String> games, 
       Map<String, dynamic> profileData, 
-      Position? userCurrentPosition) { // <--- Accepts the current user's Position
+      Position? userCurrentPosition) {
     
-    // --- Data Extraction from Firestore Document ---
-    
+    // 1. Basic Info Extraction
     final displayName = profileData['displayName'] as String? ?? playerId.split('@').first;
+    // 🛑 FIX 1: Extract profileImage
+    final profileImage = profileData['profileImage'] as String? ?? ''; 
+    // 🛑 FIX 2: Extract preferredGenres
+    final preferredGenres = (profileData['preferredGenres'] as List?)?.map((e) => e.toString()).toList() ?? [];
+
+    // 2. Activity Status
     final lastActiveTime = (profileData['updatedAt'] as Timestamp?)?.toDate() 
                            ?? (profileData['createdAt'] as Timestamp?)?.toDate() 
                            ?? DateTime.now().subtract(const Duration(hours: 2));
     final isOnline = DateTime.now().difference(lastActiveTime).inMinutes < 15;
     
-    double calculatedDistance;
-    
-    // --- DISTANCE CALCULATION LOGIC ---
+    // 3. Distance Calculation
+    double calculatedDistance = 999.0;
     if (userCurrentPosition != null && 
         profileData.containsKey('location') && 
         profileData['location'] is Map) {
@@ -31,46 +36,27 @@ class PlayerProfileService {
       final targetLng = targetLocation['lng'] as double?;
 
       if (targetLat != null && targetLng != null) {
-        // Calculate distance in meters, then convert to miles
         final distanceInMeters = Geolocator.distanceBetween(
           userCurrentPosition.latitude,
           userCurrentPosition.longitude,
           targetLat,
           targetLng,
         );
-        // Convert meters to miles (1609.34 meters per mile)
         calculatedDistance = distanceInMeters / 1609.34;
-      } else {
-        // Fallback for corrupt location data
-        calculatedDistance = 999.0;
       }
-    } else {
-      // Fallback: If no location data for current user or target
-      // Use the large fallback number to push non-localized users to the end of the list
-      calculatedDistance = 999.0; 
-    }
-    // -----------------------------------
+    } 
 
-    if (profileData.isEmpty) {
-      return PlayerDisplay(
-        id: playerId,
-        displayName: displayName,
-        games: games,
-        distance: 100.0, 
-        isOnline: false, 
-        gamesOwned: games.length,
-        lastActiveTimestamp: DateTime.fromMicrosecondsSinceEpoch(0),
-      );
-    }
-    
+    // 4. Return the fully populated object
     return PlayerDisplay(
       id: playerId,
       displayName: displayName,
+      profileImage: profileImage,     // <--- Passed correctly now
+      preferredGenres: preferredGenres, // <--- Passed correctly now
       games: games,
-      distance: calculatedDistance, // Use REAL calculated distance
+      distance: calculatedDistance,
       isOnline: isOnline,
-      gamesOwned: games.length, 
-      lastActiveTimestamp: lastActiveTime, 
+      gamesOwned: games.length,
+      lastActiveTimestamp: lastActiveTime,
     );
   }
 }

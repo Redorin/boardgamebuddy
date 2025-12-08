@@ -1,16 +1,30 @@
-// lib/pages/profile_page.dart (FINAL REVERTED CODE)
+// lib/pages/profile_page.dart (FIXED)
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import '../services/profile_service.dart'; 
+import '../services/game_service.dart'; 
+import '../models/board_game.dart'; 
 
-// --- Data Models (keep these in the file) ---
+// --- Data Models ---
 
 class FavoriteGame {
-  final int id;
+  final String id;
   final String name;
   final String image;
 
   FavoriteGame({required this.id, required this.name, required this.image});
+
+  Map<String, dynamic> toMap() {
+    return {'id': id, 'name': name, 'image': image};
+  }
+
+  factory FavoriteGame.fromMap(Map<String, dynamic> map) {
+    return FavoriteGame(
+      id: map['id']?.toString() ?? '',
+      name: map['name'] as String? ?? 'Unknown',
+      image: map['image'] as String? ?? '',
+    );
+  }
 }
 
 class UserProfile {
@@ -57,7 +71,6 @@ class UserProfile {
 
 class ProfilePage extends StatefulWidget {
   final VoidCallback onLogout;
-
   const ProfilePage({Key? key, required this.onLogout}) : super(key: key);
 
   @override
@@ -69,7 +82,6 @@ class _ProfilePageState extends State<ProfilePage> {
   late UserProfile _profile;
   late UserProfile _editedProfile;
 
-  // Controllers for text fields
   late TextEditingController _displayNameController;
   late TextEditingController _aboutMeController;
   late TextEditingController _topGenreController;
@@ -81,19 +93,14 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   void initState() {
     super.initState();
-    
-    // Initialize with a default mock profile
     _profile = UserProfile(
       displayName: 'Loading...', 
       profileImage: _defaultProfileImage,
       aboutMe: "Tell us about your board game passion!",
       preferredGenres: [], 
       topGenre: 'Strategy', 
-      ownedGamesCount: 145, 
-      favoriteGames: [
-        FavoriteGame(id: 1, name: 'Wingspan', image: 'https://images.unsplash.com/photo-1677816156349-5fa568399cce?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHxzdHJhdGVneSUyMGJvYXJkJTIwZ2FtZXxlbnwxfHx8fDE3NjUwNjA4Njl8MA&ixlib=rb-4.1.0&q=80&w=1080'),
-        FavoriteGame(id: 2, name: 'Pandemic', image: 'https://images.unsplash.com/photo-1648422125119-351b24ee8ad6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHxjb29wZXJhdGl2ZSUyMGJvYXJkJTIwZ2FtZXxlbnwxfHx8fDE3NjUxNTU4NjJ8MA&lib=rb-4.1.0&q=80&w=1080'),
-      ],
+      ownedGamesCount: 0, 
+      favoriteGames: [],
     );
     _editedProfile = _profile.copyWith();
 
@@ -114,12 +121,11 @@ class _ProfilePageState extends State<ProfilePage> {
     super.dispose();
   }
 
-  // REMOVED: _handleImageUpload() method entirely.
-
   void _handleEdit() {
     setState(() {
       _editedProfile = _profile.copyWith(
         preferredGenres: List.from(_profile.preferredGenres), 
+        favoriteGames: List.from(_profile.favoriteGames),
       );
       _displayNameController.text = _editedProfile.displayName;
       _aboutMeController.text = _editedProfile.aboutMe;
@@ -129,35 +135,36 @@ class _ProfilePageState extends State<ProfilePage> {
     });
   }
 
+  // 💡 CORE UPDATE: Properly saving the list of favorite games!
   void _handleSave() async { 
     final newProfile = _editedProfile.copyWith(
       displayName: _displayNameController.text,
       aboutMe: _aboutMeController.text,
       topGenre: _topGenreController.text,
-      ownedGamesCount: int.tryParse(_ownedGamesCountController.text) ?? _profile.ownedGamesCount,
+      ownedGamesCount: _profile.ownedGamesCount, // Keep real count
       preferredGenres: List.from(_editedProfile.preferredGenres), 
+      favoriteGames: List.from(_editedProfile.favoriteGames),
     );
     
-    // 2. Call the persistence service
+    // Convert to List<Map> for Firestore
+    final favoriteGamesMapList = newProfile.favoriteGames.map((g) => g.toMap()).toList();
+
     await ProfileService.saveProfileEdits( 
       displayName: newProfile.displayName,
       aboutMe: newProfile.aboutMe,
       preferredGenres: newProfile.preferredGenres,
       topGenre: newProfile.topGenre,
       profileImage: newProfile.profileImage, 
+      favoriteGames: favoriteGamesMapList, // 💡 PASSING THE LIST NOW
     );
     
-    // 3. Update the local state
     setState(() {
       _profile = newProfile;
       _isEditing = false;
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Profile updated successfully!"),
-        backgroundColor: Color(0xFF16A34A), 
-      ),
+      const SnackBar(content: Text("Profile updated!"), backgroundColor: Color(0xFF16A34A)),
     );
   }
 
@@ -188,118 +195,78 @@ class _ProfilePageState extends State<ProfilePage> {
     });
   }
 
-  // lib/pages/profile_page.dart (INSIDE _ProfilePageState)
+  void _updateProfileState(Map<String, dynamic> data) async {
+    if (data.isNotEmpty) {
+      final List<String> genres = (data['preferredGenres'] as List?)?.map((e) => e.toString()).toList() ?? [];
+      final int realGameCount = await ProfileService.getOwnedGamesCount();
+      
+      List<FavoriteGame> fetchedFavorites = [];
+      if (data['favoriteGames'] != null) {
+        fetchedFavorites = (data['favoriteGames'] as List).map((item) {
+          return FavoriteGame.fromMap(item as Map<String, dynamic>);
+        }).toList();
+      }
+      
+      if (!_isEditing) {
+        setState(() {
+          _profile = _profile.copyWith(
+            displayName: data['displayName'] as String? ?? _profile.displayName,
+            profileImage: data['profileImage'] as String? ?? _defaultProfileImage,
+            aboutMe: data['aboutMe'] as String? ?? _profile.aboutMe,
+            preferredGenres: genres,
+            topGenre: data['topGenre'] as String? ?? _profile.topGenre,
+            ownedGamesCount: realGameCount,
+            favoriteGames: fetchedFavorites,
+          );
+          _displayNameController.text = _profile.displayName;
+          _aboutMeController.text = _profile.aboutMe;
+          _topGenreController.text = _profile.topGenre;
+          _ownedGamesCountController.text = realGameCount.toString();
+        });
+      }
+    }
+  }
 
-void _updateProfileState(Map<String, dynamic> data) {
-  if (data.isNotEmpty) {
-    // Safely cast Firestore List to List<String>
-    final List<String> genres = (data['preferredGenres'] as List?)?.map((e) => e.toString()).toList() ?? [];
-    
-    // Calculate Owned Games Count (You might fetch this from the user's collection later)
-    // For now, let's keep the mock count unless provided by data.
-    final int ownedGames = data['ownedGamesCount'] as int? ?? _profile.ownedGamesCount;
-    
-    if (!_isEditing) {
+  void _showManageFavoritesDialog() async {
+    final List<FavoriteGame>? result = await showDialog<List<FavoriteGame>>(
+      context: context,
+      builder: (context) => ManageFavoritesDialog(
+        currentFavorites: _editedProfile.favoriteGames,
+      ),
+    );
+
+    if (result != null) {
       setState(() {
-        _profile = _profile.copyWith(
-          // Read from data, fallback to existing profile or default
-          displayName: data['displayName'] as String? ?? _profile.displayName,
-          profileImage: data['profileImage'] as String? ?? _defaultProfileImage,
-          aboutMe: data['aboutMe'] as String? ?? _profile.aboutMe,
-          preferredGenres: genres,
-          topGenre: data['topGenre'] as String? ?? _profile.topGenre,
-          ownedGamesCount: ownedGames, // Use calculated count
-        );
-        
-        // Update controllers to reflect fetched data
-        _displayNameController.text = _profile.displayName;
-        _aboutMeController.text = _profile.aboutMe;
-        _topGenreController.text = _profile.topGenre;
-        _ownedGamesCountController.text = ownedGames.toString();
+        _editedProfile = _editedProfile.copyWith(favoriteGames: result);
       });
     }
   }
-}
   
-  // --- UI Helper Methods (buildButton, buildCard, buildSectionHeader remain the same) ---
-  Widget _buildButton({
-    required VoidCallback onPressed,
-    required String text,
-    required IconData icon,
-    required Color backgroundColor,
-    Color textColor = Colors.white,
-    Color? borderColor,
-  }) {
+  Widget _buildButton({required VoidCallback onPressed, required String text, required IconData icon, required Color backgroundColor, Color textColor = Colors.white, Color? borderColor}) {
     return ElevatedButton.icon(
-      onPressed: onPressed,
-      icon: Icon(icon, size: 16.0),
-      label: Text(text),
-      style: ElevatedButton.styleFrom(
-        foregroundColor: textColor,
-        backgroundColor: backgroundColor,
-        minimumSize: const Size(64, 32),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-          side: borderColor != null ? BorderSide(color: borderColor) : BorderSide.none,
-        ),
-        textStyle: const TextStyle(fontSize: 14),
-      ),
+      onPressed: onPressed, icon: Icon(icon, size: 16.0), label: Text(text),
+      style: ElevatedButton.styleFrom(foregroundColor: textColor, backgroundColor: backgroundColor, minimumSize: const Size(64, 32), padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8), side: borderColor != null ? BorderSide(color: borderColor) : BorderSide.none), textStyle: const TextStyle(fontSize: 14)),
     );
   }
 
   Widget _buildCard({required Widget child}) {
     return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16.0),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 2,
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16.0), boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.1), spreadRadius: 2, blurRadius: 8, offset: const Offset(0, 4))]),
       padding: const EdgeInsets.all(24.0),
       child: child,
     );
   }
 
   Widget _buildSectionHeader(String title, Color color) {
-    return Row(
-      children: [
-        Container(
-          width: 4,
-          height: 24,
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(2),
-          ),
-          margin: const EdgeInsets.only(right: 12.0),
-        ),
-        Text(
-          title,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF1F2937),
-          ),
-        ),
-      ],
-    );
+    return Row(children: [Container(width: 4, height: 24, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2)), margin: const EdgeInsets.only(right: 12.0)), Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1F2937)))]);
   }
   
-  // --- Main Build Method ---
   @override
   Widget build(BuildContext context) {
-    // CORE: Wrap the entire UI in a StreamBuilder to fetch profile data
     return StreamBuilder<Map<String, dynamic>>( 
       stream: ProfileService.getUserProfileStream(),
       builder: (context, snapshot) {
         
-        // 1. Update state when new data arrives
         if (snapshot.hasData && snapshot.data!.isNotEmpty) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             _updateProfileState(snapshot.data!);
@@ -308,32 +275,15 @@ void _updateProfileState(Map<String, dynamic> data) {
 
         final currentProfile = _isEditing ? _editedProfile : _profile;
 
-        // 2. Display Loading Indicator
         if (snapshot.connectionState == ConnectionState.waiting && currentProfile.displayName == 'Loading...') {
           return const Center(child: CircularProgressIndicator());
         }
 
-        // 3. Return the UI
         return Scaffold(
           backgroundColor: Colors.transparent, 
-          appBar: AppBar(
-            title: const Text('Profile'),
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            toolbarHeight: 0,
-          ),
+          appBar: AppBar(title: const Text('Profile'), backgroundColor: Colors.transparent, elevation: 0, toolbarHeight: 0),
           body: Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFFEFF6FF), 
-                  Color(0xFFFFF7ED), 
-                  Color(0xFFFFFBEB), 
-                ],
-              ),
-            ),
+            decoration: const BoxDecoration(gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFFEFF6FF), Color(0xFFFFF7ED), Color(0xFFFFFBEB)])),
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(16.0),
               child: Center(
@@ -342,330 +292,33 @@ void _updateProfileState(Map<String, dynamic> data) {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // --- Header/Profile Card ---
-                      _buildCard(
-                        child: Stack(
-                          children: [
-                            // Edit/Save/Cancel Buttons
-                            Positioned(
-                              top: 0,
-                              right: 0,
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  if (!_isEditing)
-                                    _buildButton(
-                                      onPressed: _handleEdit,
-                                      text: 'Edit Profile',
-                                      icon: Icons.edit_outlined,
-                                      backgroundColor: const Color(0xFF2563EB), 
-                                    )
-                                  else ...[
-                                    _buildButton(
-                                      onPressed: _handleSave,
-                                      text: 'Save',
-                                      icon: Icons.save,
-                                      backgroundColor: const Color(0xFF16A34A),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    _buildButton(
-                                      onPressed: _handleCancel,
-                                      text: 'Cancel',
-                                      icon: Icons.close,
-                                      backgroundColor: Colors.transparent,
-                                      textColor: const Color(0xFF6B7280), 
-                                      borderColor: const Color(0xFFD1D5DB), 
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            ),
-
-                            // Profile Photo and Name (REVERTED: Simple Image)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 32.0),
-                              child: Center(
-                                child: Column(
-                                  children: [
-                                    // 💡 REVERTED: Standard Profile Image (NO STACK/BUTTON)
-                                    Container(
-                                      width: 136,
-                                      height: 136,
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        gradient: const LinearGradient(
-                                          colors: [Color(0xFF3B82F6), Color(0xFFF97316)], 
-                                          begin: Alignment.topLeft,
-                                          end: Alignment.bottomRight,
-                                        ),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: Colors.black.withOpacity(0.2),
-                                            blurRadius: 10,
-                                          ),
-                                        ],
-                                      ),
-                                      padding: const EdgeInsets.all(4),
-                                      child: CircleAvatar(
-                                        backgroundColor: Colors.white,
-                                        radius: 64,
-                                        backgroundImage: NetworkImage(currentProfile.profileImage),
-                                      ),
-                                    ),
-                                    // END REVERTED BLOCK
-                                    
-                                    const SizedBox(height: 16),
-                                    _isEditing
-                                        ? SizedBox(
-                                            width: 250,
-                                            child: TextField(
-                                              controller: _displayNameController,
-                                              textAlign: TextAlign.center,
-                                              decoration: const InputDecoration(
-                                                isDense: true,
-                                                contentPadding: EdgeInsets.symmetric(vertical: 8, horizontal: 10),
-                                                border: OutlineInputBorder(),
-                                              ),
-                                              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                                            ),
-                                          )
-                                        : Text(
-                                            currentProfile.displayName,
-                                            style: const TextStyle(
-                                              fontSize: 24,
-                                              fontWeight: FontWeight.bold,
-                                              color: Color(0xFF1F2937),
-                                            ),
-                                          ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
+                      _buildCard(child: Stack(children: [Positioned(top: 0, right: 0, child: Row(mainAxisSize: MainAxisSize.min, children: [if (!_isEditing) _buildButton(onPressed: _handleEdit, text: 'Edit Profile', icon: Icons.edit_outlined, backgroundColor: const Color(0xFF2563EB)) else ...[_buildButton(onPressed: _handleSave, text: 'Save', icon: Icons.save, backgroundColor: const Color(0xFF16A34A)), const SizedBox(width: 8), _buildButton(onPressed: _handleCancel, text: 'Cancel', icon: Icons.close, backgroundColor: Colors.transparent, textColor: const Color(0xFF6B7280), borderColor: const Color(0xFFD1D5DB))]])), Padding(padding: const EdgeInsets.only(top: 32.0), child: Center(child: Column(children: [Container(width: 136, height: 136, decoration: BoxDecoration(shape: BoxShape.circle, gradient: const LinearGradient(colors: [Color(0xFF3B82F6), Color(0xFFF97316)], begin: Alignment.topLeft, end: Alignment.bottomRight), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 10, offset: const Offset(0, 4))]), padding: const EdgeInsets.all(4), child: CircleAvatar(backgroundColor: Colors.white, radius: 64, backgroundImage: NetworkImage(currentProfile.profileImage))), const SizedBox(height: 16), _isEditing ? SizedBox(width: 250, child: TextField(controller: _displayNameController, textAlign: TextAlign.center, decoration: const InputDecoration(isDense: true, contentPadding: EdgeInsets.symmetric(vertical: 8, horizontal: 10), border: OutlineInputBorder()), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold))) : Text(currentProfile.displayName, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF1F2937)))])))])),
                       const SizedBox(height: 16),
-
-                      // --- About Me Section ---
-                      _buildCard(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildSectionHeader('About Me', const Color(0xFF2563EB)),
-                            const SizedBox(height: 12),
-                            _isEditing
-                                ? TextField(
-                                    controller: _aboutMeController,
-                                    maxLines: 5,
-                                    minLines: 3,
-                                    decoration: InputDecoration(
-                                      hintText: 'Tell us about yourself...',
-                                      border: const OutlineInputBorder(),
-                                      fillColor: Colors.grey[50],
-                                      filled: true,
-                                    ),
-                                    style: const TextStyle(color: Color(0xFF374151)),
-                                  )
-                                : Text(
-                                    currentProfile.aboutMe,
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      color: Color(0xFF374151), 
-                                      height: 1.5,
-                                    ),
-                                  ),
-                          ],
-                        ),
-                      ),
-
+                      _buildCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [_buildSectionHeader('About Me', const Color(0xFF2563EB)), const SizedBox(height: 12), _isEditing ? TextField(controller: _aboutMeController, maxLines: 5, minLines: 3, decoration: InputDecoration(hintText: 'Tell us about yourself...', border: const OutlineInputBorder(), fillColor: Colors.grey[50], filled: true), style: const TextStyle(color: Color(0xFF374151))) : Text(currentProfile.aboutMe, style: const TextStyle(fontSize: 16, color: Color(0xFF374151), height: 1.5))])),
                       const SizedBox(height: 16),
-
-                      // --- Preferred Genres Section ---
-                      _buildCard(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildSectionHeader('Preferred Genres', const Color(0xFFF97316)),
-                            const SizedBox(height: 12),
-                            
-                            // Top Genre Highlight
-                            Container(
-                              margin: const EdgeInsets.only(bottom: 16),
-                              child: _isEditing
-                                  ? SizedBox(
-                                      width: 200,
-                                      child: TextField(
-                                        controller: _topGenreController,
-                                        decoration: const InputDecoration(
-                                          isDense: true,
-                                          contentPadding: EdgeInsets.symmetric(vertical: 8, horizontal: 10),
-                                          hintText: 'Top genre',
-                                          border: OutlineInputBorder(),
-                                        ),
-                                      ),
-                                    )
-                                  : Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(20),
-                                        gradient: const LinearGradient(
-                                          colors: [Color(0xFF2563EB), Color(0xFFF97316)], 
-                                        ),
-                                      ),
-                                      child: Text(
-                                        '⭐ ${currentProfile.topGenre}',
-                                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                                      ),
-                                    ),
-                            ),
-
-                            // Genre Tags
-                            Wrap(
-                              spacing: 8.0,
-                              runSpacing: 8.0,
-                              children: [
-                                ...currentProfile.preferredGenres.map((genre) => Container(
-                                      padding: EdgeInsets.only(left: 12, right: _isEditing ? 4 : 12, top: 6, bottom: 6),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFFEFF6FF), 
-                                        borderRadius: BorderRadius.circular(20),
-                                        border: Border.all(color: const Color(0xFF93C5FD)),
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Text(
-                                            genre,
-                                            style: const TextStyle(
-                                              color: Color(0xFF1D4ED8), 
-                                              fontSize: 14,
-                                            ),
-                                          ),
-                                          if (_isEditing)
-                                            InkWell(
-                                              onTap: () => _removeGenre(genre),
-                                              borderRadius: BorderRadius.circular(10),
-                                              child: const Padding(
-                                                padding: EdgeInsets.only(left: 8.0, right: 4.0),
-                                                child: Icon(
-                                                  Icons.close,
-                                                  size: 16,
-                                                  color: Color(0xFFDC2626),
-                                                ),
-                                              ),
-                                            ),
-                                        ],
-                                      ),
-                                    )),
-                                if (_isEditing)
-                                  SizedBox(
-                                    width: 120,
-                                    height: 32,
-                                    child: TextField(
-                                      controller: _newGenreController,
-                                      decoration: const InputDecoration(
-                                        hintText: 'Add genre...',
-                                        isDense: true,
-                                        contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                        border: OutlineInputBorder(),
-                                      ),
-                                      onSubmitted: _addGenre,
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-
+                      _buildCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [_buildSectionHeader('Preferred Genres', const Color(0xFFF97316)), const SizedBox(height: 12), Container(margin: const EdgeInsets.only(bottom: 16), child: _isEditing ? SizedBox(width: 200, child: TextField(controller: _topGenreController, decoration: const InputDecoration(isDense: true, contentPadding: EdgeInsets.symmetric(vertical: 8, horizontal: 10), hintText: 'Top genre', border: OutlineInputBorder()))) : Container(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), gradient: const LinearGradient(colors: [Color(0xFF2563EB), Color(0xFFF97316)])), child: Text('⭐ ${currentProfile.topGenre}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)))), Wrap(spacing: 8.0, runSpacing: 8.0, children: [...currentProfile.preferredGenres.map((genre) => Container(padding: EdgeInsets.only(left: 12, right: _isEditing ? 4 : 12, top: 6, bottom: 6), decoration: BoxDecoration(color: const Color(0xFFEFF6FF), borderRadius: BorderRadius.circular(20), border: Border.all(color: const Color(0xFF93C5FD))), child: Row(mainAxisSize: MainAxisSize.min, children: [Text(genre, style: const TextStyle(color: Color(0xFF1D4ED8), fontSize: 14)), if (_isEditing) InkWell(onTap: () => _removeGenre(genre), borderRadius: BorderRadius.circular(10), child: const Padding(padding: EdgeInsets.only(left: 8.0, right: 4.0), child: Icon(Icons.close, size: 16, color: Color(0xFFDC2626))))]))), if (_isEditing) SizedBox(width: 120, height: 32, child: TextField(controller: _newGenreController, decoration: const InputDecoration(hintText: 'Add genre...', isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 4), border: OutlineInputBorder()), onSubmitted: _addGenre))])])),
                       const SizedBox(height: 16),
-
-                      // --- Game Collection Summary ---
-                      _buildCard(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                _buildSectionHeader('My Collection', const Color(0xFFFBBF24)),
-                                _isEditing
-                                    ? SizedBox(
-                                        width: 100,
-                                        child: TextField(
-                                          controller: _ownedGamesCountController,
-                                          keyboardType: TextInputType.number,
-                                          textAlign: TextAlign.right,
-                                          decoration: const InputDecoration(
-                                            isDense: true,
-                                            contentPadding: EdgeInsets.symmetric(vertical: 8, horizontal: 10),
-                                            border: OutlineInputBorder(),
-                                          ),
-                                          onChanged: (value) {
-                                            _editedProfile = _editedProfile.copyWith(
-                                              ownedGamesCount: int.tryParse(value) ?? 0,
-                                            );
-                                          },
-                                        ),
-                                      )
-                                    : Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                        decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.circular(20),
-                                          gradient: const LinearGradient(
-                                            colors: [Color(0xFFFEF3C7), Color(0xFFFEEADF)], 
-                                          ),
-                                        ),
-                                        child: Text(
-                                          '${currentProfile.ownedGamesCount} Games',
-                                          style: const TextStyle(
-                                            color: Color(0xFF1F2937),
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ),
-                              ],
-                            ),
-                            const SizedBox(height: 16),
-
-                            // Horizontal Scrollable Game Grid
-                            SizedBox(
-                              height: 180,
-                              child: SingleChildScrollView(
-                                scrollDirection: Axis.horizontal,
-                                child: Row(
-                                  children: [
-                                    for (var game in currentProfile.favoriteGames)
-                                      Padding(
-                                        padding: const EdgeInsets.only(right: 12),
-                                        child: GameCard(game: game),
-                                      ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
+                      // --- Collection Summary (With Manage Favorites) ---
+                      _buildCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                          _buildSectionHeader('My Collection', const Color(0xFFFBBF24)),
+                          if (_isEditing)
+                            ElevatedButton.icon(
+                              onPressed: _showManageFavoritesDialog,
+                              icon: const Icon(Icons.star, size: 16, color: Colors.black),
+                              label: const Text("Manage Top 5", style: TextStyle(color: Colors.black, fontSize: 12)),
+                              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFDE047), minimumSize: const Size(0, 32), elevation: 0),
+                            )
+                          else
+                            Container(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), gradient: const LinearGradient(colors: [Color(0xFFFEF3C7), Color(0xFFFEEADF)])), child: Text('${currentProfile.ownedGamesCount} Games', style: const TextStyle(color: Color(0xFF1F2937), fontWeight: FontWeight.w600))),
+                        ]),
+                        const SizedBox(height: 16),
+                        SizedBox(height: 180, child: currentProfile.favoriteGames.isEmpty 
+                          ? const Center(child: Text("No favorites selected", style: TextStyle(color: Colors.grey))) 
+                          : SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [for (var game in currentProfile.favoriteGames) Padding(padding: const EdgeInsets.only(right: 12), child: GameCard(game: game))]))),
+                      ])),
                       const SizedBox(height: 16),
-
-                      // --- Logout Button ---
-                      _buildCard(
-                        child: SizedBox(
-                          height: 56,
-                          child: ElevatedButton(
-                            onPressed: widget.onLogout,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFDC2626), 
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                              textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                            ),
-                            child: const Text('Logout', style: TextStyle(color: Colors.white)),
-                          ),
-                        ),
-                      ),
+                      _buildCard(child: SizedBox(height: 56, child: ElevatedButton(onPressed: widget.onLogout, style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFDC2626), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)), textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)), child: const Text('Logout', style: TextStyle(color: Colors.white))))),
                     ],
                   ),
                 ),
@@ -678,62 +331,91 @@ void _updateProfileState(Map<String, dynamic> data) {
   }
 }
 
-// Helper Widget for the Game Cards
-class GameCard extends StatelessWidget {
-  final FavoriteGame game;
+// --- Manage Favorites Dialog ---
+class ManageFavoritesDialog extends StatefulWidget {
+  final List<FavoriteGame> currentFavorites;
+  const ManageFavoritesDialog({Key? key, required this.currentFavorites}) : super(key: key);
 
-  const GameCard({Key? key, required this.game}) : super(key: key);
+  @override
+  State<ManageFavoritesDialog> createState() => _ManageFavoritesDialogState();
+}
+
+class _ManageFavoritesDialogState extends State<ManageFavoritesDialog> {
+  Set<String> _selectedIds = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedIds = widget.currentFavorites.map((g) => g.id).toSet();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 128,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(8.0),
-        child: Stack(
-          children: [
-            Image.network(
-              game.image,
-              width: 128,
-              height: 160,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) => Container(
-                color: Colors.grey[300],
-                width: 128,
-                height: 160,
-                child: const Center(child: Icon(Icons.broken_image)),
-              ),
-            ),
-            Positioned.fill(
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Colors.black.withOpacity(0.7),
-                      Colors.black.withOpacity(0.2),
-                      Colors.transparent,
-                    ],
-                    begin: Alignment.bottomCenter,
-                    end: Alignment.topCenter,
+    return StreamBuilder<List<BoardGame>>(
+      stream: GameService.getUserCollectionGames(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const AlertDialog(content: SizedBox(height: 100, child: Center(child: CircularProgressIndicator())));
+        }
+        final myGames = snapshot.data ?? [];
+
+        return AlertDialog(
+          title: const Text("Select Top 5 Games"),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: myGames.isEmpty
+                ? const Text("You have no games in your collection to select.")
+                : ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: myGames.length,
+                    itemBuilder: (context, index) {
+                      final game = myGames[index];
+                      final isSelected = _selectedIds.contains(game.id);
+                      return CheckboxListTile(
+                        title: Text(game.name),
+                        subtitle: Text(game.category),
+                        value: isSelected,
+                        activeColor: Colors.deepPurpleAccent,
+                        onChanged: (bool? value) {
+                          setState(() {
+                            if (value == true) {
+                              if (_selectedIds.length < 5) _selectedIds.add(game.id);
+                              else ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Max 5 games allowed"), duration: Duration(milliseconds: 500)));
+                            } else {
+                              _selectedIds.remove(game.id);
+                            }
+                          });
+                        },
+                      );
+                    },
                   ),
-                ),
-                alignment: Alignment.bottomLeft,
-                padding: const EdgeInsets.all(8.0),
-                child: Text(
-                  game.name,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
+            ElevatedButton(
+              onPressed: () {
+                final List<FavoriteGame> selectedFavorites = myGames
+                    .where((game) => _selectedIds.contains(game.id))
+                    .map((game) => FavoriteGame(id: game.id, name: game.name, image: game.thumbnailUrl))
+                    .toList();
+                Navigator.pop(context, selectedFavorites);
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.deepPurpleAccent),
+              child: const Text("Save Selection", style: TextStyle(color: Colors.white)),
             ),
           ],
-        ),
-      ),
+        );
+      },
     );
+  }
+}
+
+// ... GameCard remains same ...
+class GameCard extends StatelessWidget {
+  final FavoriteGame game;
+  const GameCard({Key? key, required this.game}) : super(key: key);
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(width: 128, child: ClipRRect(borderRadius: BorderRadius.circular(8.0), child: Stack(children: [Image.network(game.image, width: 128, height: 160, fit: BoxFit.cover, errorBuilder: (context, error, stackTrace) => Container(color: Colors.grey[300], width: 128, height: 160, child: const Center(child: Icon(Icons.broken_image)))), Positioned.fill(child: Container(decoration: BoxDecoration(gradient: LinearGradient(colors: [Colors.black.withOpacity(0.7), Colors.black.withOpacity(0.2), Colors.transparent], begin: Alignment.bottomCenter, end: Alignment.topCenter)), alignment: Alignment.bottomLeft, padding: const EdgeInsets.all(8.0), child: Text(game.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500))))])));
   }
 }

@@ -1,17 +1,16 @@
-// lib/pages/player_finder.dart (FIXED)
+// lib/pages/player_finder.dart (FIXED: READS PUBLIC PROFILES ONLY)
 import 'package:cloud_firestore/cloud_firestore.dart'; 
-import 'package:firebase_auth/firebase_auth.dart'; // 💡 NEW IMPORT needed for ID check
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import '../services/profile_service.dart';
 
 // --- Data Models ---
-
 class PlayerDisplay {
   final String id;
   final String displayName;
   final String profileImage; 
-  final List<String> preferredGenres; 
+  final List<String> preferredGenres; // Uses genres instead of specific game titles
   final double distance;
   final bool isOnline;
   final int gamesOwned;
@@ -29,10 +28,7 @@ class PlayerDisplay {
   });
 }
 
-// --- Filter/Sort Enums ---
 enum SortOption { distance, active, games }
-
-// --- Player Finder Component ---
 
 class PlayerFinderPage extends StatefulWidget {
   const PlayerFinderPage({Key? key}) : super(key: key);
@@ -69,9 +65,7 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
   }
   
   void _initializeLocation() async {
-    // Attempt to update location in DB (fire and forget)
-    ProfileService.updateCurrentLocation();
-    
+    ProfileService.updateCurrentLocation(); // Update own location
     try {
       Position position = await Geolocator.getCurrentPosition(
           desiredAccuracy: LocationAccuracy.high);
@@ -83,7 +77,7 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
     }
   }
 
-  // Helper to map Firestore documents to our local model
+  // 💡 HELPER: Convert Firestore Document to PlayerDisplay
   PlayerDisplay _mapDocumentToPlayer(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>? ?? {};
     
@@ -91,12 +85,14 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
     final displayName = data['displayName'] as String? ?? 'Unknown Player';
     final profileImage = data['profileImage'] as String? ?? '';
     
-    // 2. Genres & Count
+    // 2. Genres & Count (Read directly from profile fields)
     final genres = (data['preferredGenres'] as List?)?.map((e) => e.toString()).toList() ?? [];
     final gamesCount = data['ownedGamesCount'] as int? ?? 0;
 
     // 3. Activity Status
-    final lastActive = (data['updatedAt'] as Timestamp?)?.toDate() ?? DateTime(2000);
+    final lastActive = (data['updatedAt'] as Timestamp?)?.toDate() 
+        ?? (data['createdAt'] as Timestamp?)?.toDate() 
+        ?? DateTime(2000);
     final isOnline = DateTime.now().difference(lastActive).inMinutes < 15;
 
     // 4. Distance Calculation
@@ -104,7 +100,6 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
     if (_userCurrentPosition != null && data['location'] != null) {
       try {
         final loc = data['location'] as Map<String, dynamic>;
-        // Safely parse lat/lng which might be int or double
         final lat = (loc['lat'] as num).toDouble();
         final lng = (loc['lng'] as num).toDouble();
         
@@ -114,10 +109,8 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
           lat, 
           lng
         );
-        distance = meters / 1609.34; // Convert meters to miles
-      } catch (e) { 
-        // Keep default distance if calculation fails
-      }
+        distance = meters / 1609.34; // Miles
+      } catch (e) { /* Ignore bad location data */ }
     }
 
     return PlayerDisplay(
@@ -161,7 +154,8 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
             ),
             const SizedBox(height: 16),
             
-            // STREAM: Listen directly to 'users' collection
+            // 💡 REVISED STREAM: Listen directly to 'users' collection
+            // This works because your rules allow reading /users/{id}
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
                 stream: FirebaseFirestore.instance.collection('users').snapshots(),
@@ -176,7 +170,7 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
                   // 1. Process Data
                   var players = snapshot.data!.docs
                       .map(_mapDocumentToPlayer)
-                      // 💡 FIX: Use FirebaseAuth.instance to get the current UID
+                      // Filter out current user
                       .where((p) => p.id != FirebaseAuth.instance.currentUser?.uid) 
                       .toList();
 
@@ -192,7 +186,6 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
                     players = players.where((p) => p.isOnline).toList();
                   }
                   
-                  // Only filter by distance if we actually have a location
                   if (!_isLocationLoading && _maxDistance < 50) {
                      players = players.where((p) => p.distance <= _maxDistance).toList();
                   }
@@ -224,6 +217,7 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
     );
   }
 
+  // --- Tile Widget ---
   Widget _buildPlayerTile(PlayerDisplay player) {
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
@@ -241,7 +235,7 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Display Genres
+            // Display Genres instead of Games list
             Text(
               player.preferredGenres.take(3).join(" • "), 
               style: const TextStyle(color: Colors.blueAccent, fontSize: 12),
@@ -250,7 +244,6 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
             const SizedBox(height: 4),
             Row(
               children: [
-                // Distance
                 const Icon(Icons.location_on, size: 12, color: Colors.white54),
                 const SizedBox(width: 4),
                 Text(
@@ -258,7 +251,6 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
                   style: const TextStyle(color: Colors.white54, fontSize: 12),
                 ),
                 const SizedBox(width: 12),
-                // Game Count
                 const Icon(Icons.casino, size: 12, color: Colors.white54),
                 const SizedBox(width: 4),
                 Text("${player.gamesOwned} Games", style: const TextStyle(color: Colors.white54, fontSize: 12)),
