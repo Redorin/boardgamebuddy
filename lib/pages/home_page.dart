@@ -3,6 +3,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../services/game_service.dart';
 import 'add_game.dart';
 import 'player_finder.dart';
+import 'profile_page.dart'; // 💡 NEW IMPORT
+import 'login_page.dart'; // Required for logout navigation
 
 class HomePage extends StatefulWidget {
   final String initialUsername;
@@ -21,6 +23,18 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     _username = widget.initialUsername;
   }
+  
+  // 💡 LOGOUT HANDLER
+  void _handleLogout() {
+    // 1. In a real app, call a service to sign out of Firebase
+    // AuthService.logout(); 
+
+    // 2. Navigate back to the LoginPage and clear the navigation stack
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (context) => LoginPage()),
+      (Route<dynamic> route) => false,
+    );
+  }
 
   void _onItemTapped(int index) {
     setState(() {
@@ -33,17 +47,14 @@ class _HomePageState extends State<HomePage> {
       case 0:
         return DiscoverPage();
       case 1:
-        return MyCollectionPage(_username);
+        // Pass the username to the Collection Page
+        return MyCollectionPage(_username); 
       case 2:
-        return PlayerFinderPage();
+        return PlayerFinderPage(); 
       case 3:
+        // 💡 UPDATED: Pass the onLogout callback to the new ProfilePage
         return ProfilePage(
-          _username,
-          onUsernameChanged: (newUsername) {
-            setState(() {
-              _username = newUsername;
-            });
-          },
+          onLogout: _handleLogout, 
         );
       default:
         return DiscoverPage();
@@ -71,8 +82,9 @@ class _HomePageState extends State<HomePage> {
           elevation: 0,
         );
       case 3:
+        // 💡 UPDATED: Title change for the new Profile page
         return AppBar(
-          title: Text("Welcome, $_username", style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+          title: Text("My Profile", style: GoogleFonts.poppins(fontWeight: FontWeight.w600)), 
           backgroundColor: Colors.deepPurpleAccent,
           elevation: 0,
         );
@@ -150,61 +162,71 @@ class DiscoverPage extends StatelessWidget {
 }
 
 // ------------------- My Collection Page -------------------
-class MyCollectionPage extends StatefulWidget {
+class MyCollectionPage extends StatelessWidget { 
   final String username;
-  const MyCollectionPage(this.username);
+  const MyCollectionPage(this.username, {super.key});
 
-  @override
-  State<MyCollectionPage> createState() => _MyCollectionPageState();
-}
-
-class _MyCollectionPageState extends State<MyCollectionPage> {
   @override
   Widget build(BuildContext context) {
-    final games = GameService.getGames(widget.username);
-
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
           Expanded(
-            child: games.isEmpty
-                ? Center(
+            child: StreamBuilder<List<String>>(
+              stream: GameService.getGamesStream(username),
+              builder: (context, snapshot) {
+                
+                if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}', style: GoogleFonts.poppins(color: Colors.red)));
+                }
+                
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                final games = snapshot.data ?? [];
+                
+                if (games.isEmpty) {
+                  return Center(
                     child: Text(
                       "No games added yet",
                       style: GoogleFonts.poppins(color: Colors.white54, fontSize: 16),
                     ),
-                  )
-                : ListView.builder(
-                    itemCount: games.length,
-                    itemBuilder: (_, i) {
-                      return Card(
-                        color: const Color(0xff1E1E1E),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        margin: const EdgeInsets.symmetric(vertical: 8),
-                        child: ListTile(
-                          title: Text(
-                            games[i],
-                            style: GoogleFonts.poppins(color: Colors.white, fontSize: 16),
-                          ),
+                  );
+                }
+                
+                return ListView.builder(
+                  itemCount: games.length,
+                  itemBuilder: (_, i) {
+                    return Card(
+                      color: const Color(0xff1E1E1E),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      margin: const EdgeInsets.symmetric(vertical: 8),
+                      child: ListTile(
+                        title: Text(
+                          games[i], 
+                          style: GoogleFonts.poppins(color: Colors.white, fontSize: 16),
                         ),
-                      );
-                    },
-                  ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
           ),
           const SizedBox(height: 16),
           SizedBox(
             width: double.infinity,
             height: 50,
             child: ElevatedButton.icon(
-              onPressed: () async {
-                await Navigator.push(
+              onPressed: () { 
+                Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => AddGamePage(widget.username),
+                    builder: (_) => AddGamePage(username),
                   ),
                 );
-                setState(() {});
               },
               icon: const Icon(Icons.add),
               label: Text(
@@ -225,89 +247,5 @@ class _MyCollectionPageState extends State<MyCollectionPage> {
   }
 }
 
-// ------------------- Profile Page -------------------
-class ProfilePage extends StatefulWidget {
-  final String username;
-  final Function(String) onUsernameChanged;
-
-  const ProfilePage(this.username, {required this.onUsernameChanged, Key? key}) : super(key: key);
-
-  @override
-  State<ProfilePage> createState() => _ProfilePageState();
-}
-
-class _ProfilePageState extends State<ProfilePage> {
-  late TextEditingController _usernameCtrl;
-
-  @override
-  void initState() {
-    super.initState();
-    _usernameCtrl = TextEditingController(text: widget.username);
-  }
-
-  @override
-  void dispose() {
-    _usernameCtrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            "Edit Username",
-            style: GoogleFonts.poppins(
-                color: Colors.white, fontSize: 24, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 20),
-          TextField(
-            controller: _usernameCtrl,
-            style: const TextStyle(color: Colors.white),
-            decoration: InputDecoration(
-              hintText: "Username",
-              hintStyle: const TextStyle(color: Colors.white54),
-              filled: true,
-              fillColor: const Color(0xff2A2C2E),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide.none,
-              ),
-              prefixIcon: const Icon(Icons.person, color: Colors.white54),
-            ),
-          ),
-          const SizedBox(height: 30),
-          SizedBox(
-            width: double.infinity,
-            height: 50,
-            child: ElevatedButton(
-              onPressed: () {
-                widget.onUsernameChanged(_usernameCtrl.text);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text("Username updated!"),
-                    backgroundColor: Colors.deepPurpleAccent,
-                  ),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.deepPurpleAccent,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                elevation: 5,
-                shadowColor: Colors.deepPurpleAccent.withOpacity(0.5),
-              ),
-              child: Text(
-                "Save",
-                style: GoogleFonts.poppins(
-                    color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600),
-              ),
-            ),
-          )
-        ],
-      ),
-    );
-  }
-}
+// NOTE: PlayerFinderPage should be imported from its own file (lib/pages/player_finder.dart)
+// and is not included here for brevity, but should remain in your project.

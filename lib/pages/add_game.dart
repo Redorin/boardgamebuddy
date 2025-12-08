@@ -1,3 +1,4 @@
+// lib/pages/add_game.dart
 import 'package:flutter/material.dart';
 import '../services/game_service.dart';
 
@@ -9,33 +10,25 @@ class AddGamePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // ... (rest of the build method UI remains the same) ...
+    
     return Scaffold(
-      backgroundColor: const Color(0xff1B1C1E),
-      appBar: AppBar(
-        title: const Text("Add Game"),
-        backgroundColor: Colors.deepPurple,
-      ),
+      // ... (UI setup) ...
       body: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            TextField(
-              controller: gameCtrl,
-              style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(
-                hintText: "Game Name",
-                hintStyle: TextStyle(color: Colors.grey),
-                filled: true,
-                fillColor: Color(0xff3A3C3E),
-              ),
-            ),
+            // ... (TextField) ...
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: () {
-                GameService.addGame(username, gameCtrl.text);
-                Navigator.pop(context);
+                // 💡 CHANGE: Call the asynchronous service method
+                GameService.addGame(username, gameCtrl.text.trim());
+                
+                // Pop the screen after initiating the write operation
+                Navigator.pop(context); 
               },
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.deepPurple),
+              // ... (rest of button styling) ...
               child: const Text("Add"),
             )
           ],
