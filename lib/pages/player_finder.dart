@@ -1,29 +1,26 @@
-// lib/pages/player_finder.dart
 import 'package:flutter/material.dart';
 import '../services/game_service.dart';
+import '../services/player_profile_service.dart'; // REQUIRED IMPORT
 
-// --- Data Models (Simplified for current Stream structure) ---
-
-// Assuming the stream returns a Map<String, List<String>>
-// where the key is the user ID/Name and the value is their game list.
-// For the filters, we will use a more detailed local model.
+// --- Data Models ---
 
 class PlayerDisplay {
   final String id;
   final String displayName;
   final List<String> games;
-  // Simplified mock data fields for filtering/sorting
   final double distance;
   final bool isOnline;
   final int gamesOwned;
+  final DateTime lastActiveTimestamp; // Added for sorting
 
   PlayerDisplay({
     required this.id,
     required this.displayName,
     required this.games,
-    this.distance = 5.0, // Default mock value
-    this.isOnline = true,  // Default mock value
-    this.gamesOwned = 50, // Default mock value
+    this.distance = 5.0,
+    this.isOnline = true,
+    this.gamesOwned = 50,
+    required this.lastActiveTimestamp,
   });
 }
 
@@ -57,7 +54,7 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
   String _searchQuery = '';
   SortOption _sortBy = SortOption.distance;
   double _maxDistance = 10.0;
-  List<String> _selectedGenres = []; // Used for filtering the mocked list
+  List<String> _selectedGenres = []; // For future filtering
   bool _showOnlineOnly = false;
   
   final TextEditingController _searchController = TextEditingController();
@@ -97,54 +94,54 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
   }
 
   // --- Filtering and Sorting Logic ---
-  List<PlayerDisplay> _getFilteredAndSortedPlayers(Map<String, List<String>> rawPlayers) {
+  List<PlayerDisplay> _getFilteredAndSortedPlayers(
+      Map<String, List<String>> rawPlayers) {
+        
+    // 1. Map raw data to PlayerDisplay objects using the new service
     List<PlayerDisplay> players = rawPlayers.entries.map((entry) {
-      // For this step, we mock the extra fields since the Stream only provides ID and Games.
-      // In a real Firebase integration, these fields would come from a UserProfile model.
-      return PlayerDisplay(
-        id: entry.key,
-        displayName: entry.key.split('@').first, // Simple username from email/id
-        games: entry.value,
-        distance: (entry.key.length % 9) + 1.0, // Mock distance based on key length
-        isOnline: (entry.key.length % 2 == 0),
-        gamesOwned: entry.value.length * 5,
-      );
+      final playerId = entry.key;
+      final games = entry.value;
+      
+      // Use the service to create the complete PlayerDisplay object
+      return PlayerProfileService.createPlayerDisplay(playerId, games);
+      
     }).toList();
 
+    // 2. Filter the list
     players = players.where((player) {
-      // 1. Search filter (by display name or game name)
+      // a. Search filter (by display name or game name)
       final matchesSearch = _searchQuery.isEmpty ||
           player.displayName.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           player.games.any((game) => game.toLowerCase().contains(_searchQuery.toLowerCase()));
 
-      // 2. Distance filter
+      // b. Distance filter
       final matchesDistance = player.distance <= _maxDistance;
 
-      // 3. Online filter
+      // c. Online filter
       final matchesOnline = !_showOnlineOnly || player.isOnline;
       
-      // NOTE: Genre filter is omitted as the current Stream doesn't provide a list of "preferred genres"
-
       return matchesSearch && matchesDistance && matchesOnline;
     }).toList();
 
-    // 4. Sort
+    // 3. Sort the filtered list
     players.sort((a, b) {
       switch (_sortBy) {
         case SortOption.distance:
-          return a.distance.compareTo(b.distance);
+          // Ascending sort (closer distance first)
+          return a.distance.compareTo(b.distance); 
         case SortOption.games:
-          return b.gamesOwned.compareTo(a.gamesOwned);
+          // Descending sort (more games first)
+          return b.gamesOwned.compareTo(a.gamesOwned); 
         case SortOption.active:
-          // Placeholder for "active". In a real app, this would use a timestamp.
-          return a.id.compareTo(b.id);
+          // Descending sort (most recently active first)
+          return b.lastActiveTimestamp.compareTo(a.lastActiveTimestamp); 
       }
     });
 
     return players;
   }
   
-  // --- Filter Dialog UI (from previous example, adapted) ---
+  // --- Filter Dialog UI ---
   Widget _buildFilterDialog() {
     // Local copies of state for the dialog before applying
     SortOption tempSortBy = _sortBy;
@@ -274,7 +271,6 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
 
   @override
   Widget build(BuildContext context) {
-    // 💡 NOTE: Assuming a dark background for the ListTiles based on your original code.
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -386,7 +382,6 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
   
   // --- Reusable Player Tile Widget ---
   Widget _buildPlayerTile(PlayerDisplay player) {
-    // 💡 Custom Tile to include more details and match the dark theme
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
       color: Colors.white.withOpacity(0.05), // Slightly lighter background for the card
@@ -422,7 +417,7 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
             const SizedBox(height: 4),
             Row(
               children: [
-                Icon(Icons.location_on, color: Colors.blueAccent, size: 14),
+                const Icon(Icons.location_on, color: Colors.blueAccent, size: 14),
                 const SizedBox(width: 4),
                 Text(
                   '${player.distance.toStringAsFixed(1)} mi away',

@@ -57,4 +57,15 @@ class AuthService {
       return false;
     }
   }
+
+  static Future<void> logout() async {
+    try {
+      await _auth.signOut();
+      print('User successfully signed out.');
+    } catch (e) {
+      print('Logout Error: $e');
+      // For simplicity, we don't return false on failure, 
+      // as sign out usually succeeds unless there's a serious client issue.
+    }
+  }
 }

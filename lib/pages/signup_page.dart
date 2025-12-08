@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import 'login_page.dart';
+import 'onboarding_page.dart';
 
 class SignupPage extends StatefulWidget {
   const SignupPage({super.key});
@@ -67,7 +68,8 @@ class _SignupPageState extends State<SignupPage> {
       // Success! Redirect to the LoginPage for the user to sign in.
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => LoginPage()),
+      // User is now logged in, send them directly to onboarding
+      MaterialPageRoute(builder: (_) => const OnboardingPage()),
       );
     }
   }

@@ -1,8 +1,11 @@
+// lib/main.dart (UPDATED)
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // <--- NEW IMPORT
 import 'firebase_options.dart';
 
 import 'pages/login_page.dart';
+import 'pages/home_page.dart'; // <--- Ensure this is imported
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -22,7 +25,32 @@ class BoardGameBuddy extends StatelessWidget {
     return MaterialApp(
       title: "BoardGame Buddy",
       debugShowCheckedModeBanner: false,
-      home: LoginPage(),
+      
+      // 💡 CORE CHANGE: Check Auth State Immediately
+      home: StreamBuilder<User?>(
+        // Listen to Firebase Auth state changes (real-time stream)
+        stream: FirebaseAuth.instance.authStateChanges(),
+        builder: (context, snapshot) {
+          
+          // 1. Connection/Loading State
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            // Show a simple loading indicator while Firebase checks the user's session
+            return const Center(child: CircularProgressIndicator(color: Colors.deepPurpleAccent)); 
+          }
+          
+          // 2. Authenticated State
+          // snapshot.hasData returns true if a User object is present (logged in)
+          if (snapshot.hasData) {
+            final user = snapshot.data!;
+            // If logged in, pass the user's email/ID to HomePage
+            return HomePage(user.email ?? user.uid); 
+          }
+          
+          // 3. Unauthenticated State
+          // If no user data is present, show the login screen
+          return LoginPage();
+        },
+      ),
     );
   }
 }
