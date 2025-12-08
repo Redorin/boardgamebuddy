@@ -2,9 +2,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/game_service.dart';
-import 'add_game.dart';
+import '../models/board_game.dart'; 
+import 'catalog_page.dart'; // <--- NEW IMPORT
 
-// 💡 FIX: Removed 'username' property and constructor requirement
 class MyCollectionPage extends StatelessWidget { 
   const MyCollectionPage({super.key}); 
 
@@ -15,47 +15,53 @@ class MyCollectionPage extends StatelessWidget {
       child: Column(
         children: [
           Expanded(
-            // ✅ FIX: getGamesStream() no longer requires an argument
-            child: StreamBuilder<List<String>>(
-              stream: GameService.getGamesStream(),
+            // CORE CHANGE: Streaming List<BoardGame>
+            child: StreamBuilder<List<BoardGame>>(
+              stream: GameService.getUserCollectionGames(),
               builder: (context, snapshot) {
                 
-                // 1. Check for errors
-                if (snapshot.hasError) {
-                  return Center(child: Text('Error: ${snapshot.error}', style: GoogleFonts.poppins(color: Colors.red)));
-                }
-                
-                // 2. Show loading indicator
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
+                if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}', style: GoogleFonts.poppins(color: Colors.red)));
+                }
 
-                // 3. Get the data
                 final games = snapshot.data ?? [];
                 
-                // 4. Build the UI
                 if (games.isEmpty) {
                   return Center(
                     child: Text(
-                      "No games added yet",
+                      "Your collection is empty. Add some games!",
                       style: GoogleFonts.poppins(color: Colors.white54, fontSize: 16),
                     ),
                   );
                 }
                 
-                // Display the list of game names
                 return ListView.builder(
                   itemCount: games.length,
                   itemBuilder: (_, i) {
+                    final game = games[i];
                     return Card(
                       color: const Color(0xff1E1E1E),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       margin: const EdgeInsets.symmetric(vertical: 8),
                       child: ListTile(
+                        leading: Image.network(
+                          game.thumbnailUrl.isEmpty ? 'https://via.placeholder.com/48' : game.thumbnailUrl,
+                          width: 48,
+                          fit: BoxFit.cover,
+                          errorBuilder: (c, o, s) => const Icon(Icons.category, color: Colors.white70),
+                        ),
                         title: Text(
-                          games[i], 
+                          game.name, 
                           style: GoogleFonts.poppins(color: Colors.white, fontSize: 16),
                         ),
+                        subtitle: Text(
+                          '${game.minPlayers}-${game.maxPlayers} players | ${game.playingTime} min',
+                          style: GoogleFonts.poppins(color: Colors.grey, fontSize: 12),
+                        ),
+                        trailing: const Icon(Icons.chevron_right, color: Colors.white54),
                       ),
                     );
                   },
@@ -64,17 +70,17 @@ class MyCollectionPage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          // Add Game Button (Navigation)
+          // Add Game Button 
           SizedBox(
             width: double.infinity,
             height: 50,
             child: ElevatedButton.icon(
               onPressed: () {
-                // ✅ FIX: AddGamePage no longer requires an argument
+                // NEW NAVIGATION: Go to CatalogPage
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => AddGamePage(),
+                    builder: (_) => const CatalogPage(),
                   ),
                 );
               },

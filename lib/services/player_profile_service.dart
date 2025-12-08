@@ -1,66 +1,76 @@
 // lib/services/player_profile_service.dart
-
-import '../pages/player_finder.dart'; // Import PlayerDisplay and related types
+import '../pages/player_finder.dart'; 
+import 'dart:math'; 
+import 'package:cloud_firestore/cloud_firestore.dart'; 
+import 'package:geolocator/geolocator.dart'; // <--- NEW IMPORT
 
 class PlayerProfileService {
-  // Mock data for user profiles (will later be replaced by Firestore data)
-  static final Map<String, Map<String, dynamic>> _mockUserProfiles = {
-    // Keys match player IDs/Emails returned by GameService
-    'user1@example.com': {
-      'displayName': 'StrategyGuru',
-      'distance': 2.5,
-      'isOnline': true,
-      'lastActiveTimestamp': DateTime.now().subtract(const Duration(minutes: 5)),
-    },
-    'user2@example.com': {
-      'displayName': 'CardSharp',
-      'distance': 8.1,
-      'isOnline': false,
-      'lastActiveTimestamp': DateTime.now().subtract(const Duration(hours: 3)),
-    },
-    'user3@example.com': {
-      'displayName': 'TheWorkerPlacer',
-      'distance': 1.2,
-      'isOnline': true,
-      'lastActiveTimestamp': DateTime.now().subtract(const Duration(minutes: 30)),
-    },
-    'user4@example.com': {
-      'displayName': 'CoopQueen',
-      'distance': 15.0,
-      'isOnline': false,
-      'lastActiveTimestamp': DateTime.now().subtract(const Duration(days: 1)),
-    },
-    // Add more mock users as needed...
-  };
 
-  // Function to create a full PlayerDisplay model by merging game data with profile data
   static PlayerDisplay createPlayerDisplay(
-      String playerId, List<String> games) {
+      String playerId, List<String> games, 
+      Map<String, dynamic> profileData, 
+      Position? userCurrentPosition) { // <--- Accepts the current user's Position
     
-    // Look up the mock profile data using the player's ID/Email
-    final mockData = _mockUserProfiles[playerId];
+    // --- Data Extraction from Firestore Document ---
     
-    // Fallback if profile data is missing
-    if (mockData == null) {
+    final displayName = profileData['displayName'] as String? ?? playerId.split('@').first;
+    final lastActiveTime = (profileData['updatedAt'] as Timestamp?)?.toDate() 
+                           ?? (profileData['createdAt'] as Timestamp?)?.toDate() 
+                           ?? DateTime.now().subtract(const Duration(hours: 2));
+    final isOnline = DateTime.now().difference(lastActiveTime).inMinutes < 15;
+    
+    double calculatedDistance;
+    
+    // --- DISTANCE CALCULATION LOGIC ---
+    if (userCurrentPosition != null && 
+        profileData.containsKey('location') && 
+        profileData['location'] is Map) {
+      
+      final targetLocation = profileData['location'];
+      final targetLat = targetLocation['lat'] as double?;
+      final targetLng = targetLocation['lng'] as double?;
+
+      if (targetLat != null && targetLng != null) {
+        // Calculate distance in meters, then convert to miles
+        final distanceInMeters = Geolocator.distanceBetween(
+          userCurrentPosition.latitude,
+          userCurrentPosition.longitude,
+          targetLat,
+          targetLng,
+        );
+        // Convert meters to miles (1609.34 meters per mile)
+        calculatedDistance = distanceInMeters / 1609.34;
+      } else {
+        // Fallback for corrupt location data
+        calculatedDistance = 999.0;
+      }
+    } else {
+      // Fallback: If no location data for current user or target
+      // Use the large fallback number to push non-localized users to the end of the list
+      calculatedDistance = 999.0; 
+    }
+    // -----------------------------------
+
+    if (profileData.isEmpty) {
       return PlayerDisplay(
         id: playerId,
-        displayName: playerId.split('@').first,
+        displayName: displayName,
         games: games,
         distance: 100.0, 
-        isOnline: false,
+        isOnline: false, 
         gamesOwned: games.length,
-        lastActiveTimestamp: DateTime.fromMicrosecondsSinceEpoch(0), // Oldest possible time
+        lastActiveTimestamp: DateTime.fromMicrosecondsSinceEpoch(0),
       );
     }
-
+    
     return PlayerDisplay(
       id: playerId,
-      displayName: mockData['displayName'] as String,
+      displayName: displayName,
       games: games,
-      distance: mockData['distance'] as double,
-      isOnline: mockData['isOnline'] as bool,
+      distance: calculatedDistance, // Use REAL calculated distance
+      isOnline: isOnline,
       gamesOwned: games.length, 
-      lastActiveTimestamp: mockData['lastActiveTimestamp'] as DateTime,
+      lastActiveTimestamp: lastActiveTime, 
     );
   }
 }

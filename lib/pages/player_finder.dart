@@ -1,47 +1,38 @@
+// lib/pages/player_finder.dart (FIXED)
+import 'package:cloud_firestore/cloud_firestore.dart'; 
+import 'package:firebase_auth/firebase_auth.dart'; // 💡 NEW IMPORT needed for ID check
 import 'package:flutter/material.dart';
-import '../services/game_service.dart';
-import '../services/player_profile_service.dart'; // REQUIRED IMPORT
+import 'package:geolocator/geolocator.dart';
+import '../services/profile_service.dart';
 
 // --- Data Models ---
 
 class PlayerDisplay {
   final String id;
   final String displayName;
-  final List<String> games;
+  final String profileImage; 
+  final List<String> preferredGenres; 
   final double distance;
   final bool isOnline;
   final int gamesOwned;
-  final DateTime lastActiveTimestamp; // Added for sorting
+  final DateTime lastActiveTimestamp;
 
   PlayerDisplay({
     required this.id,
     required this.displayName,
-    required this.games,
-    this.distance = 5.0,
-    this.isOnline = true,
-    this.gamesOwned = 50,
+    required this.profileImage,
+    required this.preferredGenres,
+    this.distance = 999.0,
+    this.isOnline = false,
+    this.gamesOwned = 0,
     required this.lastActiveTimestamp,
   });
 }
 
 // --- Filter/Sort Enums ---
-
 enum SortOption { distance, active, games }
 
-extension SortOptionExtension on SortOption {
-  String get name {
-    switch (this) {
-      case SortOption.distance:
-        return 'Distance (Closest First)';
-      case SortOption.active:
-        return 'Recently Active';
-      case SortOption.games:
-        return 'Games Owned (Most First)';
-    }
-  }
-}
-
-// --- Player Finder Component (Stateful Widget) ---
+// --- Player Finder Component ---
 
 class PlayerFinderPage extends StatefulWidget {
   const PlayerFinderPage({Key? key}) : super(key: key);
@@ -53,11 +44,12 @@ class PlayerFinderPage extends StatefulWidget {
 class _PlayerFinderPageState extends State<PlayerFinderPage> {
   String _searchQuery = '';
   SortOption _sortBy = SortOption.distance;
-  double _maxDistance = 10.0;
-  List<String> _selectedGenres = []; // For future filtering
+  double _maxDistance = 50.0; 
   bool _showOnlineOnly = false;
   
   final TextEditingController _searchController = TextEditingController();
+  Position? _userCurrentPosition;
+  bool _isLocationLoading = true; 
 
   @override
   void initState() {
@@ -67,6 +59,7 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
         _searchQuery = _searchController.text;
       });
     });
+    _initializeLocation();
   }
 
   @override
@@ -75,197 +68,67 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
     super.dispose();
   }
   
-  void _clearFilters() {
-    setState(() {
-      _maxDistance = 10.0;
-      _selectedGenres = [];
-      _showOnlineOnly = false;
-    });
+  void _initializeLocation() async {
+    // Attempt to update location in DB (fire and forget)
+    ProfileService.updateCurrentLocation();
+    
+    try {
+      Position position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high);
+      if (mounted) setState(() => _userCurrentPosition = position);
+    } catch (e) {
+      print("Location error: $e");
+    } finally {
+      if (mounted) setState(() => _isLocationLoading = false);
+    }
   }
 
-  void _toggleGenre(String genre) {
-    setState(() {
-      if (_selectedGenres.contains(genre)) {
-        _selectedGenres.remove(genre);
-      } else {
-        _selectedGenres.add(genre);
-      }
-    });
-  }
+  // Helper to map Firestore documents to our local model
+  PlayerDisplay _mapDocumentToPlayer(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>? ?? {};
+    
+    // 1. Basic Info
+    final displayName = data['displayName'] as String? ?? 'Unknown Player';
+    final profileImage = data['profileImage'] as String? ?? '';
+    
+    // 2. Genres & Count
+    final genres = (data['preferredGenres'] as List?)?.map((e) => e.toString()).toList() ?? [];
+    final gamesCount = data['ownedGamesCount'] as int? ?? 0;
 
-  // --- Filtering and Sorting Logic ---
-  List<PlayerDisplay> _getFilteredAndSortedPlayers(
-      Map<String, List<String>> rawPlayers) {
+    // 3. Activity Status
+    final lastActive = (data['updatedAt'] as Timestamp?)?.toDate() ?? DateTime(2000);
+    final isOnline = DateTime.now().difference(lastActive).inMinutes < 15;
+
+    // 4. Distance Calculation
+    double distance = 999.0;
+    if (_userCurrentPosition != null && data['location'] != null) {
+      try {
+        final loc = data['location'] as Map<String, dynamic>;
+        // Safely parse lat/lng which might be int or double
+        final lat = (loc['lat'] as num).toDouble();
+        final lng = (loc['lng'] as num).toDouble();
         
-    // 1. Map raw data to PlayerDisplay objects using the new service
-    List<PlayerDisplay> players = rawPlayers.entries.map((entry) {
-      final playerId = entry.key;
-      final games = entry.value;
-      
-      // Use the service to create the complete PlayerDisplay object
-      return PlayerProfileService.createPlayerDisplay(playerId, games);
-      
-    }).toList();
-
-    // 2. Filter the list
-    players = players.where((player) {
-      // a. Search filter (by display name or game name)
-      final matchesSearch = _searchQuery.isEmpty ||
-          player.displayName.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          player.games.any((game) => game.toLowerCase().contains(_searchQuery.toLowerCase()));
-
-      // b. Distance filter
-      final matchesDistance = player.distance <= _maxDistance;
-
-      // c. Online filter
-      final matchesOnline = !_showOnlineOnly || player.isOnline;
-      
-      return matchesSearch && matchesDistance && matchesOnline;
-    }).toList();
-
-    // 3. Sort the filtered list
-    players.sort((a, b) {
-      switch (_sortBy) {
-        case SortOption.distance:
-          // Ascending sort (closer distance first)
-          return a.distance.compareTo(b.distance); 
-        case SortOption.games:
-          // Descending sort (more games first)
-          return b.gamesOwned.compareTo(a.gamesOwned); 
-        case SortOption.active:
-          // Descending sort (most recently active first)
-          return b.lastActiveTimestamp.compareTo(a.lastActiveTimestamp); 
-      }
-    });
-
-    return players;
-  }
-  
-  // --- Filter Dialog UI ---
-  Widget _buildFilterDialog() {
-    // Local copies of state for the dialog before applying
-    SortOption tempSortBy = _sortBy;
-    double tempMaxDistance = _maxDistance;
-    bool tempShowOnlineOnly = _showOnlineOnly;
-
-    return StatefulBuilder(
-      builder: (BuildContext context, StateSetter setModalState) {
-        return SingleChildScrollView(
-          child: Padding(
-            padding: EdgeInsets.only(
-              bottom: MediaQuery.of(context).viewInsets.bottom,
-              top: 24,
-              left: 24,
-              right: 24,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Filter & Sort',
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        setModalState(() {
-                          tempMaxDistance = 10.0;
-                          tempShowOnlineOnly = false;
-                        });
-                      },
-                      child: const Text('Clear All', style: TextStyle(color: Colors.blueAccent)),
-                    ),
-                  ],
-                ),
-                const Divider(height: 16, color: Colors.white30),
-
-                // Sort By
-                const Text('Sort By', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-                DropdownButtonFormField<SortOption>(
-                  value: tempSortBy,
-                  dropdownColor: Colors.black87,
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(borderSide: BorderSide(color: Colors.white54)),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.white54)),
-                  ),
-                  style: const TextStyle(color: Colors.white),
-                  onChanged: (SortOption? newValue) {
-                    if (newValue != null) setModalState(() => tempSortBy = newValue);
-                  },
-                  items: SortOption.values.map<DropdownMenuItem<SortOption>>((SortOption value) {
-                    return DropdownMenuItem<SortOption>(
-                      value: value,
-                      child: Text(value.name, style: const TextStyle(color: Colors.white)),
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(height: 24),
-
-                // Proximity Slider
-                Text('Within ${tempMaxDistance.round()} miles',
-                    style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-                Slider(
-                  value: tempMaxDistance,
-                  min: 1,
-                  max: 25,
-                  divisions: 24,
-                  label: tempMaxDistance.round().toString(),
-                  onChanged: (double value) {
-                    setModalState(() => tempMaxDistance = value);
-                  },
-                  activeColor: Colors.blueAccent,
-                  inactiveColor: Colors.white30,
-                ),
-                const SizedBox(height: 16),
-
-                // Quick Filters
-                const Text('Quick Filters', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-                Row(
-                  children: [
-                    Checkbox(
-                      value: tempShowOnlineOnly,
-                      onChanged: (bool? checked) {
-                        setModalState(() => tempShowOnlineOnly = checked ?? false);
-                      },
-                      activeColor: Colors.blueAccent,
-                      checkColor: Colors.white,
-                    ),
-                    const Text('Online Now Only', style: TextStyle(color: Colors.white70)),
-                  ],
-                ),
-                const SizedBox(height: 32),
-
-                // Apply Button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      // Apply filters and close dialog
-                      setState(() {
-                        _sortBy = tempSortBy;
-                        _maxDistance = tempMaxDistance;
-                        _showOnlineOnly = tempShowOnlineOnly;
-                      });
-                      Navigator.of(context).pop();
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blueAccent,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    ),
-                    child: const Text('Apply Filters', style: TextStyle(color: Colors.white, fontSize: 16)),
-                  ),
-                ),
-                const SizedBox(height: 24),
-              ],
-            ),
-          ),
+        final meters = Geolocator.distanceBetween(
+          _userCurrentPosition!.latitude, 
+          _userCurrentPosition!.longitude, 
+          lat, 
+          lng
         );
-      },
+        distance = meters / 1609.34; // Convert meters to miles
+      } catch (e) { 
+        // Keep default distance if calculation fails
+      }
+    }
+
+    return PlayerDisplay(
+      id: doc.id,
+      displayName: displayName,
+      profileImage: profileImage,
+      preferredGenres: genres,
+      distance: distance,
+      isOnline: isOnline,
+      gamesOwned: gamesCount,
+      lastActiveTimestamp: lastActive,
     );
   }
 
@@ -276,100 +139,81 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF1E1E2C), // Dark Blue/Purple
-            Color(0xFF0A0A1F), // Very Dark Blue
-          ],
+          colors: [Color(0xFF1E1E2C), Color(0xFF0A0A1F)],
         ),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            // --- Search and Filter Bar ---
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _searchController,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: InputDecoration(
-                      hintText: 'Search by name or game...',
-                      hintStyle: const TextStyle(color: Colors.white54),
-                      prefixIcon: const Icon(Icons.search, color: Colors.white54),
-                      filled: true,
-                      fillColor: Colors.white.withOpacity(0.1),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                InkWell(
-                  onTap: () {
-                    showModalBottomSheet(
-                      context: context,
-                      isScrollControlled: true,
-                      backgroundColor: Colors.transparent, // Ensure backdrop is transparent
-                      builder: (context) => Container(
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF1E1E2C), // Dark color for the bottom sheet
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: _buildFilterDialog(),
-                      ),
-                    );
-                  },
-                  child: Container(
-                    height: 48,
-                    width: 48,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      color: Colors.white.withOpacity(0.1),
-                    ),
-                    child: const Icon(Icons.tune, color: Colors.white),
-                  ),
-                ),
-              ],
+            // Search Bar
+            TextField(
+              controller: _searchController,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                hintText: 'Search players...',
+                hintStyle: const TextStyle(color: Colors.white54),
+                prefixIcon: const Icon(Icons.search, color: Colors.white54),
+                filled: true,
+                fillColor: Colors.white.withOpacity(0.1),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+              ),
             ),
             const SizedBox(height: 16),
             
-            // --- Player List StreamBuilder ---
+            // STREAM: Listen directly to 'users' collection
             Expanded(
-              child: StreamBuilder<Map<String, List<String>>>(
-                stream: GameService.getAllPlayersStream(),
+              child: StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance.collection('users').snapshots(),
                 builder: (context, snapshot) {
                   if (snapshot.hasError) {
                     return Center(child: Text('Error: ${snapshot.error}', style: const TextStyle(color: Colors.red)));
                   }
-
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator(color: Colors.white70));
+                    return const Center(child: CircularProgressIndicator());
                   }
 
-                  final rawPlayers = snapshot.data ?? {};
-                  final filteredPlayers = _getFilteredAndSortedPlayers(rawPlayers);
+                  // 1. Process Data
+                  var players = snapshot.data!.docs
+                      .map(_mapDocumentToPlayer)
+                      // 💡 FIX: Use FirebaseAuth.instance to get the current UID
+                      .where((p) => p.id != FirebaseAuth.instance.currentUser?.uid) 
+                      .toList();
+
+                  // 2. Apply Filters
+                  if (_searchQuery.isNotEmpty) {
+                    players = players.where((p) => 
+                      p.displayName.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+                      p.preferredGenres.any((g) => g.toLowerCase().contains(_searchQuery.toLowerCase()))
+                    ).toList();
+                  }
                   
-                  if (filteredPlayers.isEmpty) {
-                    return const Center(
-                      child: Text(
-                        "No players found matching your criteria.",
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.white54, fontSize: 16),
-                      ),
-                    );
+                  if (_showOnlineOnly) {
+                    players = players.where((p) => p.isOnline).toList();
+                  }
+                  
+                  // Only filter by distance if we actually have a location
+                  if (!_isLocationLoading && _maxDistance < 50) {
+                     players = players.where((p) => p.distance <= _maxDistance).toList();
                   }
 
-                  // Build the list of players
+                  // 3. Sort
+                  players.sort((a, b) {
+                    switch (_sortBy) {
+                      case SortOption.distance: return a.distance.compareTo(b.distance);
+                      case SortOption.games: return b.gamesOwned.compareTo(a.gamesOwned);
+                      case SortOption.active: return b.lastActiveTimestamp.compareTo(a.lastActiveTimestamp);
+                    }
+                  });
+
+                  if (players.isEmpty) {
+                    return const Center(child: Text("No players found.", style: TextStyle(color: Colors.white54)));
+                  }
+
+                  // 4. List View
                   return ListView.builder(
-                    itemCount: filteredPlayers.length,
-                    itemBuilder: (context, index) {
-                      final player = filteredPlayers[index];
-                      return _buildPlayerTile(player);
-                    },
+                    itemCount: players.length,
+                    itemBuilder: (context, index) => _buildPlayerTile(players[index]),
                   );
                 },
               ),
@@ -379,67 +223,50 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
       ),
     );
   }
-  
-  // --- Reusable Player Tile Widget ---
+
   Widget _buildPlayerTile(PlayerDisplay player) {
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
-      color: Colors.white.withOpacity(0.05), // Slightly lighter background for the card
-      elevation: 0,
+      color: Colors.white.withOpacity(0.05),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ListTile(
-        leading: Container(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: player.isOnline ? Colors.green : Colors.grey,
-            border: Border.all(color: Colors.white, width: 2),
-          ),
-          child: Center(
-            child: Text(
-              player.displayName.substring(0, 1).toUpperCase(),
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-            ),
-          ),
+        leading: CircleAvatar(
+          backgroundColor: Colors.grey,
+          backgroundImage: player.profileImage.isNotEmpty ? NetworkImage(player.profileImage) : null,
+          child: player.profileImage.isEmpty 
+              ? Text(player.displayName.isNotEmpty ? player.displayName[0].toUpperCase() : '?') 
+              : null,
         ),
-        title: Text(
-          player.displayName, // Username
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
+        title: Text(player.displayName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Display Genres
             Text(
-              'Games: ${player.games.join(", ")}', // List of games
-              style: const TextStyle(color: Colors.white70, fontSize: 12),
+              player.preferredGenres.take(3).join(" • "), 
+              style: const TextStyle(color: Colors.blueAccent, fontSize: 12),
+              maxLines: 1, overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 4),
             Row(
               children: [
-                const Icon(Icons.location_on, color: Colors.blueAccent, size: 14),
+                // Distance
+                const Icon(Icons.location_on, size: 12, color: Colors.white54),
                 const SizedBox(width: 4),
                 Text(
-                  '${player.distance.toStringAsFixed(1)} mi away',
-                  style: const TextStyle(color: Colors.blueAccent, fontSize: 12),
+                  player.distance >= 999 ? "Unknown dist" : "${player.distance.toStringAsFixed(1)} mi",
+                  style: const TextStyle(color: Colors.white54, fontSize: 12),
                 ),
-                const SizedBox(width: 8),
-                Icon(player.isOnline ? Icons.circle : Icons.watch_later_outlined, 
-                    color: player.isOnline ? Colors.green : Colors.white54, 
-                    size: 14),
+                const SizedBox(width: 12),
+                // Game Count
+                const Icon(Icons.casino, size: 12, color: Colors.white54),
                 const SizedBox(width: 4),
-                Text(
-                  player.isOnline ? 'Online Now' : 'Offline',
-                  style: TextStyle(color: player.isOnline ? Colors.green : Colors.white54, fontSize: 12),
-                ),
+                Text("${player.gamesOwned} Games", style: const TextStyle(color: Colors.white54, fontSize: 12)),
               ],
             )
           ],
         ),
-        trailing: const Icon(Icons.chevron_right, color: Colors.white54),
-        onTap: () {
-          // TODO: Navigate to player profile
-        },
+        trailing: Icon(Icons.circle, size: 12, color: player.isOnline ? Colors.green : Colors.grey),
       ),
     );
   }

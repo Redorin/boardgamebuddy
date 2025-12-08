@@ -1,11 +1,11 @@
-// lib/pages/onboarding_page.dart (CORRECTED)
+// lib/pages/onboarding_page.dart (COMPLETE CODE)
 
 import 'package:flutter/material.dart';
-import '../services/auth_service.dart'; // Needed for potential future data persistence
+import '../services/profile_service.dart'; // To save the data
 import 'home_page.dart'; // Final destination
 
 // ----------------------------------------------------
-// --- STEP 1: USERNAME SETUP (Widget Definition) ---
+// --- STEP 1: USERNAME SETUP ---
 // ----------------------------------------------------
 
 class UsernameSetup extends StatefulWidget {
@@ -37,7 +37,7 @@ class _UsernameSetupState extends State<UsernameSetup> {
   // --- Validation Logic ---
   void _handleNext() {
     setState(() {
-      _error = null; // Clear previous error
+      _error = null;
     });
 
     final String username = _usernameController.text.trim();
@@ -70,7 +70,6 @@ class _UsernameSetupState extends State<UsernameSetup> {
       return;
     }
 
-    // If validation passes
     widget.onNext(username);
   }
 
@@ -266,7 +265,7 @@ class _UsernameSetupState extends State<UsernameSetup> {
 }
 
 // ----------------------------------------------------
-// --- STEP 2: GENRE SETUP (Widget Definition) ---
+// --- STEP 2: GENRE SETUP ---
 // ----------------------------------------------------
 
 class GenreSetup extends StatefulWidget {
@@ -500,27 +499,31 @@ class _OnboardingPageState extends State<OnboardingPage> {
   }
   
   // This function is called when the user finishes all steps
-  void _onOnboardingComplete(List<String> genres) {
+  void _onOnboardingComplete(List<String> genres) async { // Added 'async'
     _tempGenres = genres;
     
-    // TODO: Persistence logic goes here later!
-    // ProfileService.saveOnboardingData(_tempUsername, _tempGenres);
+    // 💡 CORE: Call the service to save data to Firestore
+    if (_tempUsername.isNotEmpty) {
+      await ProfileService.saveOnboardingData(
+        username: _tempUsername,
+        preferredGenres: _tempGenres,
+      );
+    }
     
     // Redirect to HomePage (final destination)
-    // We assume the user is still authenticated here.
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(
-        // Pass the new username to HomePage for display in the AppBar
-        builder: (context) => HomePage(_tempUsername), 
-      ),
-      (Route<dynamic> route) => false,
-    );
+    if (mounted) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(
+          // Pass the new username to HomePage for display in the AppBar
+          builder: (context) => HomePage(_tempUsername), 
+        ),
+        (Route<dynamic> route) => false,
+      );
+    }
   }
   
   // This function is called if the user skips Step 1
   void _onSkip() {
-    // If the user skips, we use a default placeholder username (e.g., their email prefix)
-    // For this mock flow, we just complete the onboarding
     _onOnboardingComplete([]); 
   }
 
@@ -531,7 +534,6 @@ class _OnboardingPageState extends State<OnboardingPage> {
       index: _currentStep,
       children: [
         // Step 1: Username Setup
-        // ✅ FIX: Calling the class directly, no need for extra imports
         UsernameSetup( 
           onNext: _onUsernameSetupComplete,
           onSkip: _onSkip,

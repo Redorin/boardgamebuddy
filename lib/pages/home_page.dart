@@ -1,14 +1,13 @@
-// lib/pages/home_page.dart (UPDATED)
+// lib/pages/home_page.dart (FINAL CORRECTED CODE)
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/game_service.dart';
-import 'add_game.dart';
 import 'player_finder.dart';
 import 'profile_page.dart';
 import 'login_page.dart';
-// 💡 FIX: Added necessary import for MyCollectionPage
 import 'my_collection.dart'; 
 import '../services/auth_service.dart';
+import '../services/profile_service.dart'; // <--- ADDED: ProfileService import
 
 class HomePage extends StatefulWidget {
   final String initialUsername;
@@ -26,21 +25,24 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _username = widget.initialUsername;
+    
+    // 💡 GEOLOCATION INTEGRATION: Update user's location upon launch
+    ProfileService.updateCurrentLocation(); 
   }
   
   // LOGOUT HANDLER
-  void _handleLogout() async { // <--- Added 'async' keyword
-  // 1. Call the service to sign out of Firebase
-  await AuthService.logout(); 
+  void _handleLogout() async { 
+    // 1. Call the service to sign out of Firebase
+    await AuthService.logout(); 
 
-  // 2. Navigate back to the LoginPage and clear the navigation stack
-  if (mounted) {
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (context) => LoginPage()),
-      (Route<dynamic> route) => false,
-    );
+    // 2. Navigate back to the LoginPage and clear the navigation stack
+    if (mounted) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => LoginPage()),
+        (Route<dynamic> route) => false,
+      );
+    }
   }
-}
 
   void _onItemTapped(int index) {
     setState(() {
@@ -53,8 +55,8 @@ class _HomePageState extends State<HomePage> {
       case 0:
         return DiscoverPage();
       case 1:
-        // ✅ FIX: MyCollectionPage is now called without arguments
-        return MyCollectionPage(); 
+        // MyCollectionPage no longer requires arguments
+        return const MyCollectionPage(); 
       case 2:
         return const PlayerFinderPage(); 
       case 3:
