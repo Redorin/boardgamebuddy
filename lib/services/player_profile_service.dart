@@ -1,4 +1,4 @@
-// lib/services/player_profile_service.dart (FIXED)
+// lib/services/player_profile_service.dart (FINAL CORRECTED VERSION)
 import '../pages/player_finder.dart'; 
 import 'dart:math'; 
 import 'package:cloud_firestore/cloud_firestore.dart'; 
@@ -6,34 +6,37 @@ import 'package:geolocator/geolocator.dart';
 
 class PlayerProfileService {
 
+  // FIX: Signature now matches the requirements of the PlayerDisplay model
   static PlayerDisplay createPlayerDisplay(
       String playerId, 
-      List<String> games, 
       Map<String, dynamic> profileData, 
       Position? userCurrentPosition) {
     
-    // 1. Basic Info Extraction
+    // --- Data Extraction ---
     final displayName = profileData['displayName'] as String? ?? playerId.split('@').first;
-    // 🛑 FIX 1: Extract profileImage
+    
+    // Extract required fields
     final profileImage = profileData['profileImage'] as String? ?? ''; 
-    // 🛑 FIX 2: Extract preferredGenres
-    final preferredGenres = (profileData['preferredGenres'] as List?)?.map((e) => e.toString()).toList() ?? [];
+    final preferredGenres = (profileData['preferredGenres'] as List?)
+        ?.map((e) => e.toString())
+        .toList() ?? [];
+    final gamesOwned = profileData['ownedGamesCount'] as int? ?? 0;
 
-    // 2. Activity Status
+    // --- Activity Status ---
     final lastActiveTime = (profileData['updatedAt'] as Timestamp?)?.toDate() 
                            ?? (profileData['createdAt'] as Timestamp?)?.toDate() 
                            ?? DateTime.now().subtract(const Duration(hours: 2));
     final isOnline = DateTime.now().difference(lastActiveTime).inMinutes < 15;
     
-    // 3. Distance Calculation
+    // --- Distance Calculation ---
     double calculatedDistance = 999.0;
     if (userCurrentPosition != null && 
         profileData.containsKey('location') && 
         profileData['location'] is Map) {
       
       final targetLocation = profileData['location'];
-      final targetLat = targetLocation['lat'] as double?;
-      final targetLng = targetLocation['lng'] as double?;
+      final targetLat = (targetLocation['lat'] as num?)?.toDouble();
+      final targetLng = (targetLocation['lng'] as num?)?.toDouble();
 
       if (targetLat != null && targetLng != null) {
         final distanceInMeters = Geolocator.distanceBetween(
@@ -46,16 +49,15 @@ class PlayerProfileService {
       }
     } 
 
-    // 4. Return the fully populated object
+    // --- Return the fully populated object ---
     return PlayerDisplay(
       id: playerId,
       displayName: displayName,
-      profileImage: profileImage,     // <--- Passed correctly now
-      preferredGenres: preferredGenres, // <--- Passed correctly now
-      games: games,
+      profileImage: profileImage,     
+      preferredGenres: preferredGenres, 
       distance: calculatedDistance,
       isOnline: isOnline,
-      gamesOwned: games.length,
+      gamesOwned: gamesOwned,
       lastActiveTimestamp: lastActiveTime,
     );
   }
