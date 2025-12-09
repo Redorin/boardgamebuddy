@@ -1,6 +1,5 @@
 // lib/pages/profile_page.dart (FINAL, CLEANED, AND WORKING)
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart'; // Added missing import
 import '../utils/avatar_urls.dart'; // Retained for AVATAR_URLS constant
 import '../services/profile_service.dart'; 
 import '../services/game_service.dart'; 

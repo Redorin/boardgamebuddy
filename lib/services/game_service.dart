@@ -1,4 +1,4 @@
-// lib/services/game_service.dart (UPDATED)
+// lib/services/game_service.dart (UPDATED with Remove and Check methods)
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart'; 
 import 'dart:async'; 
@@ -17,21 +17,16 @@ class GameService {
     return _db.collection('users').doc(userId); 
   }
 
-  // 1. ADD GAMES BY ID (Write to Firestore - New Logic)
+  // 1. ADD GAMES BY ID (Write to Firestore - Unchanged)
   static Future<void> addGamesByIds(List<String> gameIds) async { 
     final userDocRef = _getUserDocRef();
     if (userDocRef == null) return;
     
     final collectionRef = userDocRef.collection('collection'); 
-
-    // Use a Firestore Write Batch for atomic updates
     final batch = _db.batch();
 
     for (String gameId in gameIds) {
-      // The document ID in the user's collection is now the official game ID
       final docRef = collectionRef.doc(gameId);
-      
-      // Store only the game ID and a timestamp in the user's collection
       batch.set(docRef, {
         'gameId': gameId,
         'added_at': FieldValue.serverTimestamp()
@@ -46,32 +41,41 @@ class GameService {
     }
   }
 
-  // 2. GET USER'S GAMES (Read from Firestore - Stream)
-  // Returns a Stream of BoardGame objects by joining user collection data with catalog data
+  // 1.5. ✅ NEW: REMOVE GAME BY ID
+  static Future<void> removeGameById(String gameId) async {
+    final userDocRef = _getUserDocRef();
+    if (userDocRef == null) return;
+    
+    try {
+      await userDocRef.collection('collection').doc(gameId).delete();
+      print('Game ID $gameId removed from collection for UID: $currentUserId.');
+    } catch (e) {
+      print('Error removing game from collection: $e');
+    }
+  }
+
+  // 2. GET USER'S GAMES (Read from Firestore - Stream - Unchanged)
   static Stream<List<BoardGame>> getUserCollectionGames() {
     final userDocRef = _getUserDocRef();
     if (userDocRef == null) return Stream.value([]);
     
-    // 1. Stream the user's collection (only containing game IDs)
     return userDocRef.collection('collection')
         .orderBy('added_at', descending: true)
         .snapshots() 
         .asyncMap((collectionSnapshot) async {
             
           final List<String> gameIds = collectionSnapshot.docs
-              .map((doc) => doc.id) // Doc ID is the game ID
+              .map((doc) => doc.id) 
               .toList();
 
           if (gameIds.isEmpty) return [];
 
-          // 2. Batch fetch the actual game data from the global 'games' collection using IDs
           final List<Future<DocumentSnapshot<Map<String, dynamic>>>> futures = gameIds
               .map((id) => _db.collection('games').doc(id).get())
               .toList();
 
           final List<DocumentSnapshot<Map<String, dynamic>>> catalogSnapshots = await Future.wait(futures);
 
-          // 3. Convert snapshots to BoardGame objects
           return catalogSnapshots
               .where((snap) => snap.exists && snap.data() != null)
               .map((snap) => BoardGame.fromFirestore(snap.data()!))
@@ -79,9 +83,8 @@ class GameService {
         });
   }
   
-  // 3. GET ALL CATALOG GAMES (Read from global collection)
+  // 3. GET ALL CATALOG GAMES (Read from global collection - Unchanged)
   static Stream<List<BoardGame>> getAllCatalogGames() {
-    // This is a direct read from the public '/games' collection
     return _db.collection('games')
         .orderBy('name')
         .snapshots() 
@@ -92,7 +95,7 @@ class GameService {
         });
   }
   
-  // 4. GET ALL PLAYERS (remains the same as before)
+  // 4. GET ALL PLAYERS (remains the same as before - Unchanged)
   static Stream<Map<String, List<String>>> getAllPlayersStream() {
     return _db.collection('users').snapshots().asyncMap((usersSnapshot) async {
         final Map<String, List<String>> playersData = {};
@@ -107,7 +110,7 @@ class GameService {
               .get();
 
           final List<String> games = gamesSnapshot.docs
-              .map((doc) => doc.id) // Now mapping the Game ID
+              .map((doc) => doc.id) 
               .toList();
 
           if (games.isNotEmpty) {
@@ -115,6 +118,19 @@ class GameService {
           }
         }
         return playersData;
+    });
+  }
+  
+  // 5. ✅ NEW: Check if a game is owned (Used for the drawer state)
+  static Stream<bool> isGameOwned(String gameId) {
+    final userDocRef = _getUserDocRef();
+    if (userDocRef == null) return Stream.value(false);
+
+    return userDocRef.collection('collection').doc(gameId).snapshots().map((snapshot) {
+      return snapshot.exists;
+    }).handleError((e) {
+        print("Error checking game ownership: $e");
+        return false;
     });
   }
 }
