@@ -32,7 +32,7 @@ class _CatalogPageState extends State<CatalogPage> {
       return;
     }
     
-    // 1. Call service to add all selected games
+    // 1. Call service to add all selected games (Triggers counter cache update)
     await GameService.addGamesByIds(_selectedGameIds.toList());
     
     if (mounted) {
@@ -126,10 +126,9 @@ class GameCatalogCard extends StatelessWidget {
   color: const Color(0xff1E1E1E),
   borderRadius: BorderRadius.circular(16),
   
-  // ✅ FIX: Return 'null' (which is BoxBorder?) or a transparent Border.all()
+  // ✅ FIX: Return 'null' or a transparent Border.all()
   border: isSelected 
       ? Border.all(color: Colors.deepPurpleAccent, width: 3)
-      // Change BorderSide.none to 'null' or a transparent Border.all
       : null, 
 ),
       child: Column(

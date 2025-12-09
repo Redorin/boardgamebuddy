@@ -203,7 +203,9 @@ class _ProfilePageState extends State<ProfilePage> {
   void _updateProfileState(Map<String, dynamic> data) async {
     if (data.isNotEmpty) {
       final List<String> genres = (data['preferredGenres'] as List?)?.map((e) => e.toString()).toList() ?? [];
-      final int realGameCount = await ProfileService.getOwnedGamesCount();
+      
+      // 💡 QUOTA FIX: Get ownedGamesCount directly from the streamed document data
+      final int realGameCount = (data['ownedGamesCount'] as num?)?.toInt() ?? 0;
       
       List<FavoriteGame> fetchedFavorites = [];
       if (data['favoriteGames'] != null) {
@@ -213,7 +215,6 @@ class _ProfilePageState extends State<ProfilePage> {
       }
       
       // Determine the image URL to load/set as the default:
-      // 1. Check for a previously saved custom avatar URL
       String savedImageUrl = data['profileImage'] as String? ?? AVATAR_URLS.first; 
       
       if (!_isEditing) {
@@ -224,7 +225,7 @@ class _ProfilePageState extends State<ProfilePage> {
             aboutMe: data['aboutMe'] as String? ?? _profile.aboutMe,
             preferredGenres: genres,
             topGenre: data['topGenre'] as String? ?? _profile.topGenre,
-            ownedGamesCount: realGameCount,
+            ownedGamesCount: realGameCount, // Set cached count
             favoriteGames: fetchedFavorites,
           );
           _displayNameController.text = _profile.displayName;
@@ -318,17 +319,8 @@ class _ProfilePageState extends State<ProfilePage> {
           radius: 64,
           backgroundImage: NetworkImage(imageUrlToDisplay), // Displays the selected image
           
-          // 💡 FIX: Use the 'child' property for an immediate, synchronous placeholder
-          child: initials.isNotEmpty 
-              ? Text(
-                  initials,
-                  style: const TextStyle(
-                      fontSize: 48, 
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF3B82F6), // Dark color for contrast
-                  ),
-                )
-              : null,
+          // ❌ FIX: Remove the text initial placeholder.
+          child: null,
         ),
       ),
       if (_isEditing)
@@ -395,7 +387,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   children: [
                     Text(genre, style: const TextStyle(color: Color(0xFF1D4ED8), fontSize: 14)),
                     if (_isEditing)
-                      InkWell(onTap: () => _removeGenre(genre), borderRadius: BorderRadius.circular(10), child: const Padding(padding: EdgeInsets.only(left: 8.0, right: 4.0), child: Icon(Icons.close, size: 16, color: Color(0xFFDC2626)))),
+                      InkWell(onTap: () => _removeGenre(genre), borderRadius: BorderRadius.circular(10), child: const Padding(padding: const EdgeInsets.only(left: 8.0, right: 4.0), child: Icon(Icons.close, size: 16, color: Color(0xFFDC2626)))),
                   ],
                 ),
               )),
@@ -513,6 +505,7 @@ class _ProfilePageState extends State<ProfilePage> {
       builder: (context, snapshot) {
         
         if (snapshot.hasData && snapshot.data!.isNotEmpty) {
+          // Use addPostFrameCallback to safely call setState after build completes
           WidgetsBinding.instance.addPostFrameCallback((_) {
             _updateProfileState(snapshot.data!);
           });

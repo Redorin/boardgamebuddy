@@ -1,10 +1,10 @@
-// lib/services/profile_service.dart (CLEANED - FINAL VERSION)
+// lib/services/profile_service.dart (REQUIRED FILE)
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:async';
 import 'package:geolocator/geolocator.dart'; 
 
-class ProfileService {
+class ProfileService { // <--- THIS is the class the pages are looking for
   static final FirebaseFirestore _db = FirebaseFirestore.instance;
   static final FirebaseAuth _auth = FirebaseAuth.instance;
 
@@ -14,7 +14,7 @@ class ProfileService {
     return _db.collection('users').doc(userId);
   }
 
-  // 1. SAVE ONBOARDING DATA (Unchanged)
+  // 1. SAVE ONBOARDING DATA 
   static Future<void> saveOnboardingData({
     required String username,
     required List<String> preferredGenres,
@@ -26,6 +26,7 @@ class ProfileService {
         'displayName': username,
         'preferredGenres': preferredGenres,
         'onboardingComplete': true,
+        'ownedGamesCount': 0, // Initialize cached counter
         'createdAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
     } catch (e) {
@@ -33,13 +34,13 @@ class ProfileService {
     }
   }
   
-  // 2. SAVE PROFILE EDITS (Image saving logic removed from database update)
+  // 2. SAVE PROFILE EDITS
   static Future<void> saveProfileEdits({
     required String displayName,
     required String aboutMe,
     required List<String> preferredGenres,
     required String topGenre,
-    required String profileImage, // Kept in signature for UI compatibility
+    required String profileImage, 
     required List<Map<String, dynamic>> favoriteGames, 
   }) async {
     final userDocRef = _getUserDocRef();
@@ -59,6 +60,7 @@ class ProfileService {
     } catch (e) {
       print("Error saving profile edits: $e");
       if (e is FirebaseException && e.code == 'not-found') {
+        // Handle case where document doesn't exist yet
         await userDocRef.set({
           'displayName': displayName,
           'aboutMe': aboutMe,
@@ -72,7 +74,7 @@ class ProfileService {
     }
   }
 
-  // 3. STREAM USER PROFILE (Unchanged)
+  // 3. STREAM USER PROFILE 
   static Stream<Map<String, dynamic>> getUserProfileStream() {
     final userId = _auth.currentUser?.uid;
     if (userId == null) return Stream.value({});
@@ -81,7 +83,7 @@ class ProfileService {
     });
   }
   
-  // 4. Fetch Multiple Profiles (Unchanged)
+  // 4. Fetch Multiple Profiles (Used for potential future friend list hydration)
   static Future<Map<String, Map<String, dynamic>>> getProfilesByIds(List<String> profileIds) async {
     if (profileIds.isEmpty) return {};
     final profilesData = <String, Map<String, dynamic>>{};
@@ -98,7 +100,7 @@ class ProfileService {
     }
   }
 
-  // 5. Update Location (Unchanged)
+  // 5. Update Location
   static Future<void> updateCurrentLocation() async {
     final userDocRef = _getUserDocRef();
     if (userDocRef == null) return;
@@ -122,18 +124,4 @@ class ProfileService {
       print('Location update failed: $e');
     }
   }
-
-  // 6. Get Owned Games Count (Unchanged)
-  static Future<int> getOwnedGamesCount() async {
-    final userDocRef = _getUserDocRef();
-    if (userDocRef == null) return 0;
-    try {
-      final snapshot = await userDocRef.collection('collection').count().get();
-      return snapshot.count ?? 0;
-    } catch (e) {
-      return 0;
-    }
-  }
-  
-  // 7. ❌ REMOVED: The uploadProfileImage method is completely deleted.
 }

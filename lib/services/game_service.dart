@@ -1,4 +1,4 @@
-// lib/services/game_service.dart (UPDATED with Remove and Check methods)
+// lib/services/game_service.dart (UPDATED with Counter Caching Fix)
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart'; 
 import 'dart:async'; 
@@ -17,7 +17,7 @@ class GameService {
     return _db.collection('users').doc(userId); 
   }
 
-  // 1. ADD GAMES BY ID (Write to Firestore - Unchanged)
+  // 1. ADD GAMES BY ID (Write to Firestore - UPDATED for Counter Caching)
   static Future<void> addGamesByIds(List<String> gameIds) async { 
     final userDocRef = _getUserDocRef();
     if (userDocRef == null) return;
@@ -33,6 +33,11 @@ class GameService {
       }, SetOptions(merge: true));
     }
 
+    // 💡 QUOTA FIX: Increment the ownedGamesCount field on the main user document
+    batch.update(userDocRef, {
+      'ownedGamesCount': FieldValue.increment(gameIds.length.toDouble()) // Use toDouble() for increment
+    });
+
     try {
       await batch.commit();
       print('${gameIds.length} games added to collection for UID: $currentUserId.');
@@ -41,24 +46,36 @@ class GameService {
     }
   }
 
-  // 1.5. ✅ NEW: REMOVE GAME BY ID
+  // 1.5. REMOVE GAME BY ID (UPDATED for Counter Caching)
   static Future<void> removeGameById(String gameId) async {
     final userDocRef = _getUserDocRef();
     if (userDocRef == null) return;
     
+    final batch = _db.batch();
+    
+    // 1. Delete the game document from the subcollection
+    batch.delete(userDocRef.collection('collection').doc(gameId));
+    
+    // 2. 💡 QUOTA FIX: Decrement the ownedGamesCount field on the main user document
+    batch.update(userDocRef, {
+      'ownedGamesCount': FieldValue.increment(-1.0) // Use -1.0 for decrement
+    });
+    
     try {
-      await userDocRef.collection('collection').doc(gameId).delete();
+      await batch.commit();
       print('Game ID $gameId removed from collection for UID: $currentUserId.');
     } catch (e) {
       print('Error removing game from collection: $e');
     }
   }
 
-  // 2. GET USER'S GAMES (Read from Firestore - Stream - Unchanged)
+  // 2. GET USER'S GAMES (Read from Firestore - Stream)
   static Stream<List<BoardGame>> getUserCollectionGames() {
     final userDocRef = _getUserDocRef();
     if (userDocRef == null) return Stream.value([]);
     
+    // Note: This still maps collection IDs to games, which is correct and necessary 
+    // for getting the *actual game data*. The quota fix targeted the *count* only.
     return userDocRef.collection('collection')
         .orderBy('added_at', descending: true)
         .snapshots() 
@@ -83,7 +100,7 @@ class GameService {
         });
   }
   
-  // 3. GET ALL CATALOG GAMES (Read from global collection - Unchanged)
+  // 3. GET ALL CATALOG GAMES (Read from global collection)
   static Stream<List<BoardGame>> getAllCatalogGames() {
     return _db.collection('games')
         .orderBy('name')
@@ -95,33 +112,7 @@ class GameService {
         });
   }
   
-  // 4. GET ALL PLAYERS (remains the same as before - Unchanged)
-  static Stream<Map<String, List<String>>> getAllPlayersStream() {
-    return _db.collection('users').snapshots().asyncMap((usersSnapshot) async {
-        final Map<String, List<String>> playersData = {};
-
-        for (var userDoc in usersSnapshot.docs) {
-          final username = userDoc.id;
-          
-          final gamesSnapshot = await _db
-              .collection('users')
-              .doc(username)
-              .collection('collection')
-              .get();
-
-          final List<String> games = gamesSnapshot.docs
-              .map((doc) => doc.id) 
-              .toList();
-
-          if (games.isNotEmpty) {
-            playersData[username] = games;
-          }
-        }
-        return playersData;
-    });
-  }
-  
-  // 5. ✅ NEW: Check if a game is owned (Used for the drawer state)
+  // 4. CHECK IF A GAME IS OWNED
   static Stream<bool> isGameOwned(String gameId) {
     final userDocRef = _getUserDocRef();
     if (userDocRef == null) return Stream.value(false);

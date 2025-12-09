@@ -1,3 +1,4 @@
+// lib/pages/signup_page.dart
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import 'login_page.dart';
@@ -11,7 +12,6 @@ class SignupPage extends StatefulWidget {
 }
 
 class _SignupPageState extends State<SignupPage> {
-  // 💡 Now correctly using emailCtrl for Firebase Authentication
   final emailCtrl = TextEditingController(); 
   final passwordCtrl = TextEditingController();
   final confirmPasswordCtrl = TextEditingController();
@@ -65,7 +65,7 @@ class _SignupPageState extends State<SignupPage> {
         isLoading = false;
       });
     } else {
-      // Success! Redirect to the LoginPage for the user to sign in.
+      // Success! Redirect to the Onboarding Page
       Navigator.pushReplacement(
         context,
       // User is now logged in, send them directly to onboarding
@@ -111,7 +111,7 @@ class _SignupPageState extends State<SignupPage> {
                   controller: emailCtrl,
                   style: const TextStyle(color: Colors.white),
                   decoration: InputDecoration(
-                    hintText: "Email", // 💡 Field is now labeled Email
+                    hintText: "Email", 
                     hintStyle: const TextStyle(color: Colors.grey),
                     filled: true,
                     fillColor: const Color(0xff3A3C3E),

@@ -159,7 +159,7 @@ class MyCollectionPage extends StatelessWidget {
     );
   }
 
-  // --- Game Grid Component Translation ---
+  // --- Game Grid Component Translation (Updates the counter display) ---
   Widget _buildGameGrid() {
     return StreamBuilder<List<BoardGame>>(
       stream: GameService.getUserCollectionGames(),
@@ -187,9 +187,9 @@ class MyCollectionPage extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Game Count Indicator
+              // Game Count Indicator - Now uses actual stream data
               Text(
-                "${games.length} games in collection",
+                "${games.length} games in collection", 
                 style: const TextStyle(color: Color(0xFF8F98A0), fontSize: 14),
               ),
               const SizedBox(height: 12),

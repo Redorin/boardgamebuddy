@@ -1,6 +1,5 @@
-// lib/services/player_profile_service.dart (FINAL CORRECTED VERSION)
+// lib/services/player_profile_service.dart
 import '../pages/player_finder.dart'; 
-//import 'dart:math'; 
 import 'package:cloud_firestore/cloud_firestore.dart'; 
 import 'package:geolocator/geolocator.dart'; 
 
@@ -20,7 +19,8 @@ class PlayerProfileService {
     final preferredGenres = (profileData['preferredGenres'] as List?)
         ?.map((e) => e.toString())
         .toList() ?? [];
-    final gamesOwned = profileData['ownedGamesCount'] as int? ?? 0;
+    // Note: The count is now a cached field (number or double)
+    final gamesOwned = (profileData['ownedGamesCount'] as num?)?.toInt() ?? 0;
 
     // --- Activity Status ---
     final lastActiveTime = (profileData['updatedAt'] as Timestamp?)?.toDate() 

@@ -1,22 +1,10 @@
+// lib/pages/login_page.dart
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/auth_service.dart';
 import 'signup_page.dart';
 import 'home_page.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-
-// The global signIn function is still redundant, but I'll keep it for now.
-// It will be cleaner to put this logic inside AuthService.
-Future<void> signIn(String email, String password) async {
-  try {
-    await FirebaseAuth.instance.signInWithEmailAndPassword(
-      email: email,
-      password: password,
-    );
-  } on FirebaseAuthException catch (e) {
-    print('Login error: ${e.message}');
-  }
-}
+// Note: Removed redundant global signIn function
 
 class LoginPage extends StatefulWidget {
   @override
@@ -24,18 +12,18 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  // 💡 CHANGED: Renamed usernameCtrl to emailCtrl
   final TextEditingController emailCtrl = TextEditingController(); 
   final TextEditingController passwordCtrl = TextEditingController();
 
   String error = "";
 
   void handleLogin() async {
-    // 💡 CHANGED: Using emailCtrl.text instead of usernameCtrl.text
     bool ok = await AuthService.login(
       emailCtrl.text,
       passwordCtrl.text,
     );
+
+    if (!mounted) return;
 
     if (!ok) {
       setState(() => error = "Invalid login credentials.");
@@ -79,19 +67,18 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 const SizedBox(height: 20),
 
-                // 💡 CHANGED: Email Field (previously Username)
-                Text(
-                  "Email", // 💡 CHANGED LABEL
+                // Email Field
+                const Text(
+                  "Email", 
                   style: TextStyle(color: Colors.white70),
                 ),
                 const SizedBox(height: 6),
                 TextField(
-                  controller: emailCtrl, // 💡 CHANGED CONTROLLER
+                  controller: emailCtrl, 
                   style: const TextStyle(color: Colors.white),
                   decoration: InputDecoration(
-                    // 💡 CHANGED ICON
                     prefixIcon: const Icon(Icons.email_outlined, color: Colors.grey), 
-                    hintText: "Enter email address", // 💡 CHANGED HINT
+                    hintText: "Enter email address",
                     hintStyle: TextStyle(color: Colors.grey[400]),
                     filled: true,
                     fillColor: const Color(0xff3A3C3E),
@@ -104,7 +91,7 @@ class _LoginPageState extends State<LoginPage> {
                 const SizedBox(height: 14),
 
                 // Password
-                Text(
+                const Text(
                   "Password",
                   style: TextStyle(color: Colors.white70),
                 ),
@@ -188,7 +175,7 @@ class _LoginPageState extends State<LoginPage> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => SignupPage(),
+                        builder: (context) => const SignupPage(),
                       ),
                     );
                   },

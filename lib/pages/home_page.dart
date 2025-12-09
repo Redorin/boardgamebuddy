@@ -112,7 +112,6 @@ class DiscoverPage extends StatefulWidget {
 
 class _DiscoverPageState extends State<DiscoverPage> {
   late PageController _pageController;
-  // We don't need to track currentPage since we use the controller directly
   
   @override
   void initState() {
@@ -350,7 +349,7 @@ class _DiscoverPageState extends State<DiscoverPage> {
 }
 
 // ----------------------------------------------------
-// GAME DETAIL DRAWER
+// GAME DETAIL DRAWER (Updated with Dynamic Add/Remove Logic)
 // ----------------------------------------------------
 class GameDetailDrawer extends StatelessWidget {
   final BoardGame game;
@@ -401,20 +400,39 @@ class GameDetailDrawer extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 32),
-                ElevatedButton(
-                  onPressed: () async {
-                    await GameService.addGamesByIds([game.id]);
-                    if (context.mounted) {
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("${game.name} added to collection!")));
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.deepPurple,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  ),
-                  child: const Text("Add to Collection", style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold)),
+                
+                // 💡 INTEGRATION: Dynamic Add/Remove Button
+                StreamBuilder<bool>(
+                  stream: GameService.isGameOwned(game.id),
+                  builder: (context, snapshot) {
+                    // Default to false if stream hasn't connected yet
+                    final isOwned = snapshot.data ?? false; 
+                    
+                    return ElevatedButton.icon(
+                      onPressed: () async {
+                        if (isOwned) {
+                          // REMOVE
+                          await GameService.removeGameById(game.id);
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("${game.name} removed from collection!"), backgroundColor: Colors.redAccent));
+                        } else {
+                          // ADD
+                          await GameService.addGamesByIds([game.id]);
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("${game.name} added to collection!"), backgroundColor: Colors.green));
+                        }
+                        if (context.mounted) Navigator.pop(context);
+                      },
+                      icon: Icon(isOwned ? Icons.remove_circle : Icons.add_circle, color: Colors.white),
+                      label: Text(
+                        isOwned ? "Remove from Collection" : "Add to Collection", 
+                        style: const TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold)
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: isOwned ? const Color(0xFFDC2626) : Colors.deepPurple,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      ),
+                    );
+                  }
                 ),
               ],
             ),
