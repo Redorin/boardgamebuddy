@@ -1,9 +1,7 @@
-// lib/pages/profile_page.dart (FINAL COMPLETE VERSION)
+// lib/pages/profile_page.dart (FINAL, CLEANED, AND WORKING)
 import 'package:flutter/material.dart';
-//import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
-import 'package:image_picker/image_picker.dart';
-//import 'dart:io';
-//import 'package:firebase_storage/firebase_storage.dart';
+import 'package:google_fonts/google_fonts.dart'; // Added missing import
+import '../utils/avatar_urls.dart'; // Retained for AVATAR_URLS constant
 import '../services/profile_service.dart'; 
 import '../services/game_service.dart'; 
 import '../models/board_game.dart'; 
@@ -17,12 +15,10 @@ class FavoriteGame {
 
   FavoriteGame({required this.id, required this.name, required this.image});
 
-  // Convert to Map for Firestore
   Map<String, dynamic> toMap() {
     return {'id': id, 'name': name, 'image': image};
   }
 
-  // Create from Firestore Map
   factory FavoriteGame.fromMap(Map<String, dynamic> map) {
     return FavoriteGame(
       id: map['id']?.toString() ?? '',
@@ -34,7 +30,7 @@ class FavoriteGame {
 
 class UserProfile {
   String displayName;
-  String profileImage;
+  String profileImage; // Stores the selected avatar URL
   String aboutMe;
   List<String> preferredGenres;
   String topGenre;
@@ -87,9 +83,7 @@ class _ProfilePageState extends State<ProfilePage> {
   bool _isEditing = false;
   late UserProfile _profile;
   late UserProfile _editedProfile;
-  final ImagePicker _picker = ImagePicker(); 
-  bool _isUploading = false; 
-
+  
   // Controllers
   late TextEditingController _displayNameController;
   late TextEditingController _aboutMeController;
@@ -97,7 +91,7 @@ class _ProfilePageState extends State<ProfilePage> {
   late TextEditingController _ownedGamesCountController;
   late TextEditingController _newGenreController;
 
-  static const String _defaultProfileImage = 'https://images.unsplash.com/photo-1529995049601-ef63465a463f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwZXJzb24lMjBwcm9maWxlJTIwcG9ydHJhaXR8ZW58MXx8fHwxNzY1MTQ2MjE0fDA&ixlib=rb-4.1.0&q=80&w=1080';
+  static const String _defaultProfileImage = ''; 
 
   @override
   void initState() {
@@ -132,42 +126,12 @@ class _ProfilePageState extends State<ProfilePage> {
 
   // --- Logic Methods ---
 
-  Future<void> _handleImagePickAndUpload() async {
-    if (!_isEditing) return;
-
-    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
-
-    if (image != null) {
-      setState(() {
-        _isUploading = true;
-      });
-
-      // Call the service to upload
-      final String? newUrl = await ProfileService.uploadProfileImage(image);
-
-      if (mounted) {
-        setState(() {
-          _isUploading = false;
-          if (newUrl != null) {
-            _editedProfile = _editedProfile.copyWith(profileImage: newUrl);
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text("Profile image updated!"), backgroundColor: Color(0xFF16A34A)),
-            );
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text("Image upload failed."), backgroundColor: Color(0xFFDC2626)),
-            );
-          }
-        });
-      }
-    }
-  }
-
   void _handleEdit() {
     setState(() {
       _editedProfile = _profile.copyWith(
         preferredGenres: List.from(_profile.preferredGenres), 
         favoriteGames: List.from(_profile.favoriteGames),
+        profileImage: _profile.profileImage, // Ensure the current saved image URL is used
       );
       _displayNameController.text = _editedProfile.displayName;
       _aboutMeController.text = _editedProfile.aboutMe;
@@ -185,6 +149,8 @@ class _ProfilePageState extends State<ProfilePage> {
       ownedGamesCount: _profile.ownedGamesCount,
       preferredGenres: List.from(_editedProfile.preferredGenres), 
       favoriteGames: List.from(_editedProfile.favoriteGames),
+      // Use the potentially new URL from _editedProfile state
+      profileImage: _editedProfile.profileImage, 
     );
     
     final favoriteGamesMapList = newProfile.favoriteGames.map((g) => g.toMap()).toList();
@@ -194,7 +160,7 @@ class _ProfilePageState extends State<ProfilePage> {
       aboutMe: newProfile.aboutMe,
       preferredGenres: newProfile.preferredGenres,
       topGenre: newProfile.topGenre,
-      profileImage: newProfile.profileImage, 
+      profileImage: newProfile.profileImage, // Passing the selected URL for saving
       favoriteGames: favoriteGamesMapList, 
     );
     
@@ -247,11 +213,15 @@ class _ProfilePageState extends State<ProfilePage> {
         }).toList();
       }
       
+      // Determine the image URL to load/set as the default:
+      // 1. Check for a previously saved custom avatar URL
+      String savedImageUrl = data['profileImage'] as String? ?? AVATAR_URLS.first; 
+      
       if (!_isEditing) {
         setState(() {
           _profile = _profile.copyWith(
             displayName: data['displayName'] as String? ?? _profile.displayName,
-            profileImage: data['profileImage'] as String? ?? _defaultProfileImage,
+            profileImage: savedImageUrl, 
             aboutMe: data['aboutMe'] as String? ?? _profile.aboutMe,
             preferredGenres: genres,
             topGenre: data['topGenre'] as String? ?? _profile.topGenre,
@@ -282,9 +252,35 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
+  void _showAvatarSelectionDialog() async {
+    if (!_isEditing) return; // Only allow avatar changes in edit mode
+
+    final String? resultUrl = await showDialog<String>(
+      context: context,
+      builder: (context) => const AvatarSelectionDialog(),
+    );
+
+    if (resultUrl != null) {
+      setState(() {
+        // Update the edited profile state with the new URL
+        _editedProfile = _editedProfile.copyWith(profileImage: resultUrl);
+      });
+    }
+  }
+  
   // --- UI Builder Methods ---
 
+  // 1. Build Header Card (Combines logic from all previous attempts)
   Widget _buildHeaderCard(UserProfile currentProfile) {
+    // Displays the current URL being edited or the saved one.
+    final String imageUrlToDisplay = currentProfile.profileImage.isNotEmpty 
+        ? currentProfile.profileImage 
+        : AVATAR_URLS.first; 
+
+    final String initials = currentProfile.displayName.isNotEmpty
+      ? currentProfile.displayName.substring(0, 1).toUpperCase()
+      : '?';
+
     return _buildCard(
       child: Stack(
         children: [
@@ -309,30 +305,42 @@ class _ProfilePageState extends State<ProfilePage> {
               child: Column(
                 children: [
                   GestureDetector(
-                    onTap: _handleImagePickAndUpload,
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        Container(
-                          width: 136, height: 136,
-                          decoration: BoxDecoration(shape: BoxShape.circle, gradient: const LinearGradient(colors: [Color(0xFF3B82F6), Color(0xFFF97316)], begin: Alignment.topLeft, end: Alignment.bottomRight), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 10, offset: const Offset(0, 4))]),
-                          padding: const EdgeInsets.all(4),
-                          child: CircleAvatar(
-                            backgroundColor: Colors.white,
-                            radius: 64,
-                            backgroundImage: NetworkImage(currentProfile.profileImage),
-                            child: _isUploading ? const CircularProgressIndicator(color: Colors.deepPurpleAccent) : null,
-                          ),
-                        ),
-                        if (_isEditing && !_isUploading)
-                          Container(
-                            width: 136, height: 136,
-                            decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.black.withOpacity(0.4)),
-                            child: const Icon(Icons.camera_alt, color: Colors.white, size: 40),
-                          ),
-                      ],
-                    ),
+  onTap: _isEditing ? _showAvatarSelectionDialog : null, // Opens selection dialog
+  child: Stack(
+    alignment: Alignment.center,
+    children: [
+      Container(
+        width: 136, height: 136,
+        decoration: BoxDecoration(shape: BoxShape.circle, gradient: const LinearGradient(colors: [Color(0xFF3B82F6), Color(0xFFF97316)], begin: Alignment.topLeft, end: Alignment.bottomRight), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 10, offset: const Offset(0, 4))]),
+        padding: const EdgeInsets.all(4),
+        child: CircleAvatar(
+          // 💡 FIX: Set background color to match the gradient/theme while loading
+          backgroundColor: Colors.deepPurpleAccent.shade100, 
+          radius: 64,
+          backgroundImage: NetworkImage(imageUrlToDisplay), // Displays the selected image
+          
+          // 💡 FIX: Use the 'child' property for an immediate, synchronous placeholder
+          child: initials.isNotEmpty 
+              ? Text(
+                  initials,
+                  style: const TextStyle(
+                      fontSize: 48, 
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF3B82F6), // Dark color for contrast
                   ),
+                )
+              : null,
+        ),
+      ),
+      if (_isEditing)
+        Container(
+          width: 136, height: 136,
+          decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.black.withOpacity(0.4)),
+          child: const Icon(Icons.palette, color: Colors.white, size: 40),
+        ),
+    ],
+  ),
+),
                   const SizedBox(height: 16),
                   _isEditing 
                     ? SizedBox(width: 250, child: TextField(controller: _displayNameController, textAlign: TextAlign.center, decoration: const InputDecoration(isDense: true, contentPadding: EdgeInsets.symmetric(vertical: 8, horizontal: 10), border: OutlineInputBorder()), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold))) 
@@ -346,6 +354,7 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
+  // 2. Build About Me Card
   Widget _buildAboutMeCard(UserProfile currentProfile) {
     return _buildCard(
       child: Column(
@@ -361,6 +370,7 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
+  // 3. Build Genres Card
   Widget _buildGenresCard(UserProfile currentProfile) {
     return _buildCard(
       child: Column(
@@ -399,6 +409,7 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
+  // 4. Build Collection Card
   Widget _buildCollectionCard(UserProfile currentProfile) {
     return _buildCard(
       child: Column(
@@ -409,11 +420,12 @@ class _ProfilePageState extends State<ProfilePage> {
             children: [
               _buildSectionHeader('My Collection', const Color(0xFFFBBF24)),
               if (_isEditing)
-                ElevatedButton.icon(
+                _buildButton(
                   onPressed: _showManageFavoritesDialog,
-                  icon: const Icon(Icons.star, size: 16, color: Colors.black),
-                  label: const Text("Manage Top 5", style: TextStyle(color: Colors.black, fontSize: 12)),
-                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFDE047), minimumSize: const Size(0, 32), elevation: 0),
+                  icon: Icons.star,
+                  text: 'Manage Top 5', 
+                  backgroundColor: const Color(0xFFFDE047), 
+                  textColor: Colors.black
                 )
               else
                 Container(
@@ -443,6 +455,7 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
+  // 5. Build Logout Button
   Widget _buildLogoutButton() {
     return Container(
       height: 56,
@@ -471,7 +484,7 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
   
-  // --- Basic Helpers ---
+  // --- Basic Helpers (Unchanged) ---
   Widget _buildButton({required VoidCallback onPressed, required String text, required IconData icon, required Color backgroundColor, Color textColor = Colors.white, Color? borderColor}) {
     return ElevatedButton.icon(
       onPressed: onPressed,
@@ -493,7 +506,7 @@ class _ProfilePageState extends State<ProfilePage> {
     return Row(children: [Container(width: 4, height: 24, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2)), margin: const EdgeInsets.only(right: 12.0)), Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1F2937)))]);
   }
   
-  // --- Main Build Method ---
+  // --- Main Build Method (Unchanged) ---
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<Map<String, dynamic>>( 
@@ -546,7 +559,7 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 }
 
-// --- Manage Favorites Dialog ---
+// --- Manage Favorites Dialog (Unchanged) ---
 class ManageFavoritesDialog extends StatefulWidget {
   final List<FavoriteGame> currentFavorites;
   const ManageFavoritesDialog({Key? key, required this.currentFavorites}) : super(key: key);
@@ -625,12 +638,53 @@ class _ManageFavoritesDialogState extends State<ManageFavoritesDialog> {
   }
 }
 
-// --- GameCard ---
+// --- GameCard (Unchanged) ---
 class GameCard extends StatelessWidget {
   final FavoriteGame game;
   const GameCard({Key? key, required this.game}) : super(key: key);
   @override
   Widget build(BuildContext context) {
     return SizedBox(width: 128, child: ClipRRect(borderRadius: BorderRadius.circular(8.0), child: Stack(children: [Image.network(game.image, width: 128, height: 160, fit: BoxFit.cover, errorBuilder: (context, error, stackTrace) => Container(color: Colors.grey[300], width: 128, height: 160, child: const Center(child: Icon(Icons.broken_image)))), Positioned.fill(child: Container(decoration: BoxDecoration(gradient: LinearGradient(colors: [Colors.black.withOpacity(0.7), Colors.black.withOpacity(0.2), Colors.transparent], begin: Alignment.bottomCenter, end: Alignment.topCenter)), alignment: Alignment.bottomLeft, padding: const EdgeInsets.all(8.0), child: Text(game.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500))))])));
+  }
+}
+
+// --- Avatar Selection Dialog (New) ---
+class AvatarSelectionDialog extends StatelessWidget {
+  const AvatarSelectionDialog({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text("Select Your Avatar"),
+      content: SizedBox(
+        width: MediaQuery.of(context).size.width * 0.8,
+        height: MediaQuery.of(context).size.height * 0.6,
+        child: GridView.builder(
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 4,
+            crossAxisSpacing: 10,
+            mainAxisSpacing: 10,
+          ),
+          itemCount: AVATAR_URLS.length,
+          itemBuilder: (context, index) {
+            final url = AVATAR_URLS[index];
+            return GestureDetector(
+              onTap: () => Navigator.pop(context, url), // Return the selected URL
+              child: CircleAvatar(
+                radius: 40,
+                backgroundColor: Colors.grey[200],
+                backgroundImage: NetworkImage(url),
+              ),
+            );
+          },
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, null), // Return null if cancelled
+          child: const Text("Cancel"),
+        ),
+      ],
+    );
   }
 }

@@ -1,10 +1,8 @@
-// lib/services/profile_service.dart (Base64 Version - No Storage Bucket Needed)
+// lib/services/profile_service.dart (CLEANED - FINAL VERSION)
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:async';
-import 'dart:convert'; // 💡 REQUIRED for Base64
 import 'package:geolocator/geolocator.dart'; 
-import 'package:image_picker/image_picker.dart';
 
 class ProfileService {
   static final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -16,10 +14,7 @@ class ProfileService {
     return _db.collection('users').doc(userId);
   }
 
-  // ... (saveOnboardingData, saveProfileEdits, getUserProfileStream, getProfilesByIds, 
-  //      updateCurrentLocation, getOwnedGamesCount REMAIN THE SAME) ...
-
-  // 1. SAVE ONBOARDING DATA 
+  // 1. SAVE ONBOARDING DATA (Unchanged)
   static Future<void> saveOnboardingData({
     required String username,
     required List<String> preferredGenres,
@@ -38,13 +33,13 @@ class ProfileService {
     }
   }
   
-  // 2. SAVE PROFILE EDITS 
+  // 2. SAVE PROFILE EDITS (Image saving logic removed from database update)
   static Future<void> saveProfileEdits({
     required String displayName,
     required String aboutMe,
     required List<String> preferredGenres,
     required String topGenre,
-    required String profileImage, 
+    required String profileImage, // Kept in signature for UI compatibility
     required List<Map<String, dynamic>> favoriteGames, 
   }) async {
     final userDocRef = _getUserDocRef();
@@ -77,7 +72,7 @@ class ProfileService {
     }
   }
 
-  // 3. STREAM USER PROFILE
+  // 3. STREAM USER PROFILE (Unchanged)
   static Stream<Map<String, dynamic>> getUserProfileStream() {
     final userId = _auth.currentUser?.uid;
     if (userId == null) return Stream.value({});
@@ -86,7 +81,7 @@ class ProfileService {
     });
   }
   
-  // 4. Fetch Multiple Profiles
+  // 4. Fetch Multiple Profiles (Unchanged)
   static Future<Map<String, Map<String, dynamic>>> getProfilesByIds(List<String> profileIds) async {
     if (profileIds.isEmpty) return {};
     final profilesData = <String, Map<String, dynamic>>{};
@@ -103,7 +98,7 @@ class ProfileService {
     }
   }
 
-  // 5. Update Location
+  // 5. Update Location (Unchanged)
   static Future<void> updateCurrentLocation() async {
     final userDocRef = _getUserDocRef();
     if (userDocRef == null) return;
@@ -128,7 +123,7 @@ class ProfileService {
     }
   }
 
-  // 6. Get Owned Games Count
+  // 6. Get Owned Games Count (Unchanged)
   static Future<int> getOwnedGamesCount() async {
     final userDocRef = _getUserDocRef();
     if (userDocRef == null) return 0;
@@ -139,31 +134,6 @@ class ProfileService {
       return 0;
     }
   }
-
-  // 7. 💡 UPDATED: SAVE IMAGE AS BASE64 STRING (No Storage Bucket)
-  static Future<String?> uploadProfileImage(XFile imageFile) async {
-    final userId = _auth.currentUser?.uid;
-    if (userId == null) return null;
-
-    try {
-      // 1. Read bytes from the image file
-      final bytes = await imageFile.readAsBytes();
-      
-      // 2. Convert bytes to Base64 String
-      String base64Image = base64Encode(bytes);
-      
-      // 3. Save the string directly to Firestore
-      await _db.collection('users').doc(userId).update({
-        'profileImage': base64Image,
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-      
-      print("Image saved as Base64 string successfully.");
-      return base64Image;
-
-    } catch (e) {
-      print('Failed to save image: $e');
-      return null;
-    }
-  }
+  
+  // 7. ❌ REMOVED: The uploadProfileImage method is completely deleted.
 }

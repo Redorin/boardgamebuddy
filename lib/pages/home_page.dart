@@ -1,14 +1,15 @@
-// lib/pages/home_page.dart (UPDATED WITH NEW DISCOVERY DESIGN)
+// lib/pages/home_page.dart (FINAL ROBUST FIX)
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import '../services/game_service.dart';
+import '../services/auth_service.dart';
+import '../services/profile_service.dart'; 
+import '../models/board_game.dart';
 import 'player_finder.dart';
 import 'profile_page.dart';
 import 'login_page.dart';
 import 'my_collection.dart'; 
-import '../services/auth_service.dart';
-import '../services/profile_service.dart'; 
-import '../models/board_game.dart'; // Ensure this model is available
 
 class HomePage extends StatefulWidget {
   final String initialUsername;
@@ -48,7 +49,7 @@ class _HomePageState extends State<HomePage> {
   Widget _getPage() {
     switch (_selectedIndex) {
       case 0:
-        return const DiscoverPage(); // 💡 UPDATED: Now uses the new DiscoverPage
+        return const DiscoverPage(); 
       case 1:
         return const MyCollectionPage(); 
       case 2:
@@ -60,9 +61,8 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  // Helper to hide AppBar on Discover page for a cleaner look (optional)
   AppBar? _getAppBar() {
-    if (_selectedIndex == 0) return null; // Hide AppBar for immersive Discover page
+    if (_selectedIndex == 0) return null; 
 
     switch (_selectedIndex) {
       case 1:
@@ -79,7 +79,7 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xff0E141B), // Dark background from your design
+      backgroundColor: const Color(0xff0E141B), 
       appBar: _getAppBar(),
       body: _getPage(),
       bottomNavigationBar: BottomNavigationBar(
@@ -101,7 +101,7 @@ class _HomePageState extends State<HomePage> {
 }
 
 // ----------------------------------------------------
-// 💡 NEW: CIRCULAR GALLERY DISCOVER PAGE
+// 💡 DISCOVER PAGE (Fixed Swipe Sensitivity)
 // ----------------------------------------------------
 class DiscoverPage extends StatefulWidget {
   const DiscoverPage({super.key});
@@ -111,18 +111,14 @@ class DiscoverPage extends StatefulWidget {
 }
 
 class _DiscoverPageState extends State<DiscoverPage> {
-  // Using a PageController with a large viewport fraction allows neighboring cards to be seen
-  final PageController _pageController = PageController(viewportFraction: 0.7);
-  double _currentPage = 0.0;
-
+  late PageController _pageController;
+  // We don't need to track currentPage since we use the controller directly
+  
   @override
   void initState() {
     super.initState();
-    _pageController.addListener(() {
-      setState(() {
-        _currentPage = _pageController.page!;
-      });
-    });
+    // Start at a high number for visual infinite loop approximation
+    _pageController = PageController(viewportFraction: 0.7, initialPage: 1000);
   }
 
   @override
@@ -130,6 +126,22 @@ class _DiscoverPageState extends State<DiscoverPage> {
     _pageController.dispose();
     super.dispose();
   }
+
+  // --- External Navigation Methods (Used by Buttons) ---
+  void _goToNextPage() {
+    _pageController.nextPage(
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeOut,
+    );
+  }
+
+  void _goToPreviousPage() {
+    _pageController.previousPage(
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeOut,
+    );
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -144,6 +156,9 @@ class _DiscoverPageState extends State<DiscoverPage> {
         if (games.isEmpty) {
           return const Center(child: Text("No games available", style: TextStyle(color: Colors.white)));
         }
+        
+        // Use a large count for visual infinite loop approximation
+        final virtualItemCount = games.length * 1000; 
 
         return Stack(
           children: [
@@ -166,33 +181,65 @@ class _DiscoverPageState extends State<DiscoverPage> {
               ),
             ),
             
-            // The Circular/3D Gallery
+            // The Circular/3D Gallery (Primary Content)
             Center(
               child: SizedBox(
-                height: 500, // Height of the card carousel
+                height: 500,
                 child: PageView.builder(
                   controller: _pageController,
-                  itemCount: games.length,
-                  physics: const BouncingScrollPhysics(),
+                  // 💡 CRITICAL FIX: Revert to standard physics for reliable native swipe/drag
+                  physics: const BouncingScrollPhysics(), 
+                  itemCount: virtualItemCount, // Use a large number for infinite effect
                   itemBuilder: (context, index) {
-                    // Calculate transformation for "Circular" effect
-                    final double relativePosition = index - _currentPage;
-                    final double distortion = (1 - (relativePosition.abs() * 0.3)).clamp(0.0, 1.0);
-                    final double rotation = relativePosition * -0.2; // Slight rotation
+                    final gameIndex = index % games.length;
+                    final game = games[gameIndex];
+
+                    // 3D Effect Calculations (Simplified from previous attempts)
+                    // We must calculate the page position manually for the Transform
+                    final double pageDelta = (_pageController.hasClients && _pageController.page != null)
+                        ? (_pageController.page! - index)
+                        : 0.0;
+                    
+                    final double distortion = (1 - (pageDelta.abs() * 0.3)).clamp(0.0, 1.0);
+                    final double rotation = pageDelta * -0.2;
 
                     return Transform(
-                      transform: Matrix4.identity()
-                        ..setEntry(3, 2, 0.001) // Perspective
-                        ..rotateY(rotation)
-                        ..scale(distortion),
-                      alignment: Alignment.center,
-                      child: _buildGalleryCard(games[index]),
+                        transform: Matrix4.identity()
+                          ..setEntry(3, 2, 0.001) // Perspective
+                          ..rotateY(rotation)
+                          ..scale(distortion),
+                        alignment: Alignment.center,
+                        child: _buildGalleryCard(game),
                     );
                   },
                 ),
               ),
             ),
             
+            // 💡 NEW: LEFT Navigation Button (Overlay)
+            Positioned(
+              left: 0,
+              top: 0,
+              bottom: 120, // Align vertically with the carousel center
+              child: IconButton(
+                icon: const Icon(Icons.arrow_back_ios, color: Colors.white, size: 30),
+                onPressed: _goToPreviousPage,
+                splashRadius: 20,
+              ),
+            ),
+            
+            // 💡 NEW: RIGHT Navigation Button (Overlay)
+            Positioned(
+              right: 0,
+              top: 0,
+              bottom: 120, // Align vertically with the carousel center
+              child: IconButton(
+                icon: const Icon(Icons.arrow_forward_ios, color: Colors.white, size: 30),
+                onPressed: _goToNextPage,
+                splashRadius: 20,
+              ),
+            ),
+
             // Hint Text
             const Positioned(
               bottom: 40,
@@ -200,7 +247,7 @@ class _DiscoverPageState extends State<DiscoverPage> {
               right: 0,
               child: Center(
                 child: Text(
-                  "Swipe to explore • Tap for details",
+                  "Swipe or Click arrows to explore",
                   style: TextStyle(color: Colors.white30, fontSize: 12),
                 ),
               ),
@@ -214,7 +261,6 @@ class _DiscoverPageState extends State<DiscoverPage> {
   Widget _buildGalleryCard(BoardGame game) {
     return GestureDetector(
       onTap: () {
-        // Show the details drawer (similar to your React Drawer)
         showModalBottomSheet(
           context: context,
           isScrollControlled: true,
@@ -239,13 +285,11 @@ class _DiscoverPageState extends State<DiscoverPage> {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              // Image
               Image.network(
                 game.thumbnailUrl.isEmpty ? 'https://via.placeholder.com/400' : game.thumbnailUrl,
                 fit: BoxFit.cover,
                 errorBuilder: (c, o, s) => Container(color: Colors.grey[900], child: const Icon(Icons.broken_image, color: Colors.white)),
               ),
-              // Gradient Overlay
               Container(
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
@@ -256,11 +300,8 @@ class _DiscoverPageState extends State<DiscoverPage> {
                   ),
                 ),
               ),
-              // Text Content
               Positioned(
-                bottom: 20,
-                left: 20,
-                right: 20,
+                bottom: 20, left: 20, right: 20,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -275,9 +316,9 @@ class _DiscoverPageState extends State<DiscoverPage> {
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        _buildTag(Icons.category, game.category),
+                        _buildTag(LucideIcons.shapes, game.category),
                         const SizedBox(width: 10),
-                        _buildTag(Icons.timer, "${game.playingTime} min"),
+                        _buildTag(LucideIcons.timer, "${game.playingTime} min"),
                       ],
                     ),
                   ],
@@ -309,7 +350,7 @@ class _DiscoverPageState extends State<DiscoverPage> {
 }
 
 // ----------------------------------------------------
-// 💡 NEW: GAME DETAIL DRAWER (Replicates the React Drawer)
+// GAME DETAIL DRAWER
 // ----------------------------------------------------
 class GameDetailDrawer extends StatelessWidget {
   final BoardGame game;
@@ -325,15 +366,12 @@ class GameDetailDrawer extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // Drag Handle
           const SizedBox(height: 12),
           Container(width: 48, height: 6, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(3))),
-          
           Expanded(
             child: ListView(
               padding: const EdgeInsets.all(24),
               children: [
-                // Image
                 ClipRRect(
                   borderRadius: BorderRadius.circular(20),
                   child: Image.network(
@@ -344,14 +382,10 @@ class GameDetailDrawer extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 24),
-                
-                // Title
                 Text(game.name, style: GoogleFonts.poppins(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.black87)),
                 const SizedBox(height: 8),
                 Text(game.description, style: GoogleFonts.poppins(fontSize: 16, color: Colors.black54, height: 1.5)),
                 const SizedBox(height: 24),
-
-                // Stats Grid
                 GridView.count(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
@@ -360,22 +394,20 @@ class GameDetailDrawer extends StatelessWidget {
                   mainAxisSpacing: 12,
                   crossAxisSpacing: 12,
                   children: [
-                    _buildStatCard(Icons.group, "Players", "${game.minPlayers}-${game.maxPlayers}", Colors.blue),
-                    _buildStatCard(Icons.timer, "Play Time", "${game.playingTime} min", Colors.purple),
-                    _buildStatCard(Icons.category, "Genre", game.category, Colors.orange),
-                    _buildStatCard(Icons.bolt, "Difficulty", "Medium", Colors.green), // Mock difficulty
+                    _buildStatCard(LucideIcons.users, "Players", "${game.minPlayers}-${game.maxPlayers}", Colors.blue),
+                    _buildStatCard(LucideIcons.timer, "Play Time", "${game.playingTime} min", Colors.purple),
+                    _buildStatCard(LucideIcons.shapes, "Genre", game.category, Colors.orange),
+                    _buildStatCard(LucideIcons.zap, "Difficulty", "Medium", Colors.green),
                   ],
                 ),
-
                 const SizedBox(height: 32),
-                
-                // Action Buttons
                 ElevatedButton(
-                  onPressed: () {
-                    // Logic to add to collection
-                    GameService.addGamesByIds([game.id]);
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("${game.name} added!")));
+                  onPressed: () async {
+                    await GameService.addGamesByIds([game.id]);
+                    if (context.mounted) {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("${game.name} added to collection!")));
+                    }
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.deepPurple,
@@ -395,21 +427,12 @@ class GameDetailDrawer extends StatelessWidget {
   Widget _buildStatCard(IconData icon, String label, String value, Color color) {
     return Container(
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(16),
-      ),
+      decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(16)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Row(
-            children: [
-              Icon(icon, size: 16, color: color),
-              const SizedBox(width: 4),
-              Text(label, style: const TextStyle(color: Colors.grey, fontSize: 12)),
-            ],
-          ),
+          Row(children: [Icon(icon, size: 16, color: color), const SizedBox(width: 4), Text(label, style: const TextStyle(color: Colors.grey, fontSize: 12))]),
           const SizedBox(height: 4),
           Text(value, style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 14)),
         ],
