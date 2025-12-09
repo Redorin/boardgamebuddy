@@ -1,4 +1,4 @@
-// lib/pages/home_page.dart (FINAL ROBUST FIX)
+// lib/pages/home_page.dart (REVERTED TO PRE-DETAIL PAGE STATE)
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
@@ -10,6 +10,7 @@ import 'player_finder.dart';
 import 'profile_page.dart';
 import 'login_page.dart';
 import 'my_collection.dart'; 
+// The import for game_detail_page.dart is intentionally removed.
 
 class HomePage extends StatefulWidget {
   final String initialUsername;
@@ -101,7 +102,7 @@ class _HomePageState extends State<HomePage> {
 }
 
 // ----------------------------------------------------
-// 💡 DISCOVER PAGE (Fixed Swipe Sensitivity)
+// DISCOVER PAGE
 // ----------------------------------------------------
 class DiscoverPage extends StatefulWidget {
   const DiscoverPage({super.key});
@@ -116,7 +117,6 @@ class _DiscoverPageState extends State<DiscoverPage> {
   @override
   void initState() {
     super.initState();
-    // Start at a high number for visual infinite loop approximation
     _pageController = PageController(viewportFraction: 0.7, initialPage: 1000);
   }
 
@@ -126,7 +126,6 @@ class _DiscoverPageState extends State<DiscoverPage> {
     super.dispose();
   }
 
-  // --- External Navigation Methods (Used by Buttons) ---
   void _goToNextPage() {
     _pageController.nextPage(
       duration: const Duration(milliseconds: 400),
@@ -156,7 +155,6 @@ class _DiscoverPageState extends State<DiscoverPage> {
           return const Center(child: Text("No games available", style: TextStyle(color: Colors.white)));
         }
         
-        // Use a large count for visual infinite loop approximation
         final virtualItemCount = games.length * 1000; 
 
         return Stack(
@@ -186,15 +184,12 @@ class _DiscoverPageState extends State<DiscoverPage> {
                 height: 500,
                 child: PageView.builder(
                   controller: _pageController,
-                  // 💡 CRITICAL FIX: Revert to standard physics for reliable native swipe/drag
                   physics: const BouncingScrollPhysics(), 
-                  itemCount: virtualItemCount, // Use a large number for infinite effect
+                  itemCount: virtualItemCount, 
                   itemBuilder: (context, index) {
                     final gameIndex = index % games.length;
                     final game = games[gameIndex];
 
-                    // 3D Effect Calculations (Simplified from previous attempts)
-                    // We must calculate the page position manually for the Transform
                     final double pageDelta = (_pageController.hasClients && _pageController.page != null)
                         ? (_pageController.page! - index)
                         : 0.0;
@@ -204,7 +199,7 @@ class _DiscoverPageState extends State<DiscoverPage> {
 
                     return Transform(
                         transform: Matrix4.identity()
-                          ..setEntry(3, 2, 0.001) // Perspective
+                          ..setEntry(3, 2, 0.001) 
                           ..rotateY(rotation)
                           ..scale(distortion),
                         alignment: Alignment.center,
@@ -215,11 +210,11 @@ class _DiscoverPageState extends State<DiscoverPage> {
               ),
             ),
             
-            // 💡 NEW: LEFT Navigation Button (Overlay)
+            // LEFT Navigation Button (Overlay)
             Positioned(
               left: 0,
               top: 0,
-              bottom: 120, // Align vertically with the carousel center
+              bottom: 120, 
               child: IconButton(
                 icon: const Icon(Icons.arrow_back_ios, color: Colors.white, size: 30),
                 onPressed: _goToPreviousPage,
@@ -227,11 +222,11 @@ class _DiscoverPageState extends State<DiscoverPage> {
               ),
             ),
             
-            // 💡 NEW: RIGHT Navigation Button (Overlay)
+            // RIGHT Navigation Button (Overlay)
             Positioned(
               right: 0,
               top: 0,
-              bottom: 120, // Align vertically with the carousel center
+              bottom: 120, 
               child: IconButton(
                 icon: const Icon(Icons.arrow_forward_ios, color: Colors.white, size: 30),
                 onPressed: _goToNextPage,
@@ -260,6 +255,7 @@ class _DiscoverPageState extends State<DiscoverPage> {
   Widget _buildGalleryCard(BoardGame game) {
     return GestureDetector(
       onTap: () {
+        // 💡 REVERTED: Show the bottom sheet drawer
         showModalBottomSheet(
           context: context,
           isScrollControlled: true,
@@ -349,11 +345,28 @@ class _DiscoverPageState extends State<DiscoverPage> {
 }
 
 // ----------------------------------------------------
-// GAME DETAIL DRAWER (Updated with Dynamic Add/Remove Logic)
+// ✅ RESTORED: GAME DETAIL DRAWER (Bottom Sheet)
 // ----------------------------------------------------
 class GameDetailDrawer extends StatelessWidget {
   final BoardGame game;
   const GameDetailDrawer({required this.game, super.key});
+
+  // Helper method for the status cards
+  Widget _buildStatCard(IconData icon, String label, String value, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(16)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Row(children: [Icon(icon, size: 16, color: color), const SizedBox(width: 4), Text(label, style: const TextStyle(color: Colors.grey, fontSize: 12))]),
+          const SizedBox(height: 4),
+          Text(value, style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 14)),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -401,12 +414,11 @@ class GameDetailDrawer extends StatelessWidget {
                 ),
                 const SizedBox(height: 32),
                 
-                // 💡 INTEGRATION: Dynamic Add/Remove Button
+                // Dynamic Add/Remove Button
                 StreamBuilder<bool>(
                   stream: GameService.isGameOwned(game.id),
                   builder: (context, snapshot) {
-                    // Default to false if stream hasn't connected yet
-                    final isOwned = snapshot.data ?? false; 
+                    final isOwned = snapshot.data ?? false;
                     
                     return ElevatedButton.icon(
                       onPressed: () async {
@@ -419,7 +431,8 @@ class GameDetailDrawer extends StatelessWidget {
                           await GameService.addGamesByIds([game.id]);
                           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("${game.name} added to collection!"), backgroundColor: Colors.green));
                         }
-                        if (context.mounted) Navigator.pop(context);
+                        // Close the drawer after action
+                        if (context.mounted) Navigator.pop(context); 
                       },
                       icon: Icon(isOwned ? Icons.remove_circle : Icons.add_circle, color: Colors.white),
                       label: Text(
@@ -432,27 +445,11 @@ class GameDetailDrawer extends StatelessWidget {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                       ),
                     );
-                  }
+                  },
                 ),
               ],
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatCard(IconData icon, String label, String value, Color color) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(16)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Row(children: [Icon(icon, size: 16, color: color), const SizedBox(width: 4), Text(label, style: const TextStyle(color: Colors.grey, fontSize: 12))]),
-          const SizedBox(height: 4),
-          Text(value, style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 14)),
         ],
       ),
     );

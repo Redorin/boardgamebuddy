@@ -1,15 +1,16 @@
-// lib/pages/my_collection.dart (FINAL - SEARCH AND VIEW MODE TOGGLE WORKING)
+// lib/pages/my_collection.dart (FINAL - LINKS TO GAME DETAIL PAGE)
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../services/game_service.dart';
 import '../models/board_game.dart'; 
 import 'catalog_page.dart';
+import 'home_page.dart'; // Import to access GameDetailDrawer for Discover/Collection (pre-revert state)
+import 'game_detail_page.dart'; // ✅ NEW: Import for the dedicated page
 
 // 💡 NEW: Define the two view modes
 enum CollectionViewMode { grid, list } 
 
-// 💡 CHANGE: Convert StatelessWidget to StatefulWidget
 class MyCollectionPage extends StatefulWidget { 
   const MyCollectionPage({super.key}); 
 
@@ -258,7 +259,7 @@ class _MyCollectionPageState extends State<MyCollectionPage> {
                         },
                       )
                     : ListView.builder(
-                        // 💡 FIX 1: Add shrinkWrap and physics to resolve constraint issue
+                        // FIX: Use shrinkWrap and physics for NestedScrollView compatibility
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
                         itemCount: filteredGames.length,
@@ -279,7 +280,11 @@ class _MyCollectionPageState extends State<MyCollectionPage> {
     // Card styling to match the dark theme and hover effect intent
     return InkWell(
       onTap: () {
-        // TODO: Implement navigation to Game Detail Page
+        // 💡 NEW: Navigate to the full page (GameDetailPage)
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => GameDetailPage(game: game)),
+        );
       },
       child: Container(
         decoration: BoxDecoration(
@@ -350,13 +355,17 @@ class _MyCollectionPageState extends State<MyCollectionPage> {
     );
   }
   
-  // 💡 NEW: Game List Tile (List View Mode)
+  // --- Game List Tile (List View Mode) ---
   Widget _buildGameListTile(BoardGame game) {
     const Color grayText = Color(0xFF8F98A0);
 
-    return InkWell( // Use InkWell for better tap feedback
+    return InkWell( 
       onTap: () {
-        // TODO: Implement navigation to Game Detail Page
+        // 💡 NEW: Navigate to the full page (GameDetailPage)
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => GameDetailPage(game: game)),
+        );
       },
       child: Card(
         margin: const EdgeInsets.only(bottom: 10),
@@ -369,10 +378,10 @@ class _MyCollectionPageState extends State<MyCollectionPage> {
             borderRadius: BorderRadius.circular(8),
             child: Image.network(
               game.thumbnailUrl.isEmpty ? 'https://via.placeholder.com/60' : game.thumbnailUrl,
-              width: 60, // Slightly larger image
+              width: 60,
               height: 60,
               fit: BoxFit.cover,
-              errorBuilder: (c, o, s) => Container( // Handle image failure gracefully
+              errorBuilder: (c, o, s) => Container(
                 width: 60, height: 60, 
                 color: Colors.grey[700], 
                 child: const Icon(Icons.category, color: Colors.white54),
