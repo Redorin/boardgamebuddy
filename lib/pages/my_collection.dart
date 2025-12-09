@@ -1,10 +1,13 @@
-// lib/pages/my_collection.dart (WITH FUNCTIONAL SEARCH FILTER)
+// lib/pages/my_collection.dart (FINAL - SEARCH AND VIEW MODE TOGGLE WORKING)
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:lucide_icons/lucide_icons.dart'; // Using lucide_icons for icons like Search, Sliders, etc.
+import 'package:lucide_icons/lucide_icons.dart';
 import '../services/game_service.dart';
 import '../models/board_game.dart'; 
 import 'catalog_page.dart';
+
+// 💡 NEW: Define the two view modes
+enum CollectionViewMode { grid, list } 
 
 // 💡 CHANGE: Convert StatelessWidget to StatefulWidget
 class MyCollectionPage extends StatefulWidget { 
@@ -18,22 +21,26 @@ class _MyCollectionPageState extends State<MyCollectionPage> {
   // --- State Variables ---
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
-  // Note: List/Grid view state is omitted for now, focusing on search.
+  CollectionViewMode _viewMode = CollectionViewMode.grid; 
 
   @override
   void initState() {
     super.initState();
-    // 💡 NEW: Listener to update state whenever text changes
     _searchController.addListener(_updateSearchQuery);
   }
   
   void _updateSearchQuery() {
-    // Only call setState if the query actually changed to prevent excessive rebuilding
-    if (_searchQuery != _searchController.text) {
+    if (_searchQuery != _searchController.text.trim()) {
       setState(() {
         _searchQuery = _searchController.text.trim();
       });
     }
+  }
+
+  void _toggleViewMode(CollectionViewMode mode) {
+    setState(() {
+      _viewMode = mode;
+    });
   }
 
   @override
@@ -43,7 +50,7 @@ class _MyCollectionPageState extends State<MyCollectionPage> {
     super.dispose();
   }
 
-  // --- Header Component Translation (Now a method inside the State class) ---
+  // --- Header Component Translation ---
   Widget _buildCollectionsHeader(BuildContext context) {
     const Color headerBg = Color(0xFF171A21);
     const Color borderColor = Color(0xFF2A3F5F);
@@ -98,7 +105,6 @@ class _MyCollectionPageState extends State<MyCollectionPage> {
                       border: Border.all(color: borderColor),
                     ),
                     child: TextField(
-                      // 💡 NEW: Use the controller to manage input
                       controller: _searchController, 
                       style: const TextStyle(color: Colors.white),
                       decoration: InputDecoration(
@@ -108,19 +114,18 @@ class _MyCollectionPageState extends State<MyCollectionPage> {
                         border: InputBorder.none,
                         contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
                       ),
-                      // 💡 Usability: Clear search button
                       textInputAction: TextInputAction.search,
                     ),
                   ),
                 ),
                 const SizedBox(width: 8),
 
-                // Filters and View Toggles (Unchanged for now)
+                // Filters and View Toggles
                 SizedBox(
                   height: 40,
                   child: Row(
                     children: [
-                      // Filters Button
+                      // Filters Button (To be implemented later)
                       IconButton(
                         onPressed: () {},
                         icon: const Icon(LucideIcons.slidersHorizontal, size: 20, color: grayText),
@@ -138,17 +143,35 @@ class _MyCollectionPageState extends State<MyCollectionPage> {
                         ),
                         child: Row(
                           children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: borderColor, // Active state
-                                borderRadius: BorderRadius.circular(7),
+                            // Grid Button
+                            GestureDetector(
+                              onTap: () => _toggleViewMode(CollectionViewMode.grid),
+                              child: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  // Conditional coloring for Grid button
+                                  color: _viewMode == CollectionViewMode.grid ? borderColor : inputBg, 
+                                  borderRadius: BorderRadius.circular(7),
+                                ),
+                                child: Icon(LucideIcons.layoutGrid, size: 16, 
+                                  color: _viewMode == CollectionViewMode.grid ? Colors.white : grayText
+                                ),
                               ),
-                              child: const Icon(LucideIcons.layoutGrid, size: 16, color: Colors.white),
                             ),
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              child: const Icon(LucideIcons.list, size: 16, color: grayText),
+                            // List Button
+                            GestureDetector(
+                              onTap: () => _toggleViewMode(CollectionViewMode.list),
+                              child: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  // Conditional coloring for List button
+                                  color: _viewMode == CollectionViewMode.list ? borderColor : inputBg,
+                                  borderRadius: BorderRadius.circular(7),
+                                ),
+                                child: Icon(LucideIcons.list, size: 16, 
+                                  color: _viewMode == CollectionViewMode.list ? Colors.white : grayText
+                                ),
+                              ),
                             ),
                           ],
                         ),
@@ -165,7 +188,7 @@ class _MyCollectionPageState extends State<MyCollectionPage> {
     );
   }
 
-  // --- Game Grid Component Translation (Now filters the stream data) ---
+  // --- Game Grid Component Translation (Filters and Renders List/Grid) ---
   Widget _buildGameGrid() {
     return StreamBuilder<List<BoardGame>>(
       stream: GameService.getUserCollectionGames(),
@@ -179,7 +202,7 @@ class _MyCollectionPageState extends State<MyCollectionPage> {
 
         final games = snapshot.data ?? [];
         
-        // 💡 NEW: Filtering Logic
+        // Filtering Logic
         var filteredGames = games.where((game) {
           final query = _searchQuery.toLowerCase();
           
@@ -206,7 +229,7 @@ class _MyCollectionPageState extends State<MyCollectionPage> {
           );
         }
         
-        // 💡 Use filteredGames for display count and grid
+        // Use filteredGames for display count and grid
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
           child: Column(
@@ -219,20 +242,30 @@ class _MyCollectionPageState extends State<MyCollectionPage> {
               ),
               const SizedBox(height: 12),
               
-              // Responsive Game Grid
+              // Conditional rendering for Grid vs. List
               Expanded(
-                child: GridView.builder(
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2, 
-                    mainAxisSpacing: 16,
-                    crossAxisSpacing: 16,
-                    childAspectRatio: 2 / 3, 
-                  ),
-                  itemCount: filteredGames.length,
-                  itemBuilder: (_, i) {
-                    return _buildGameCard(filteredGames[i]);
-                  },
-                ),
+                child: _viewMode == CollectionViewMode.grid 
+                    ? GridView.builder(
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2, 
+                          mainAxisSpacing: 16,
+                          crossAxisSpacing: 16,
+                          childAspectRatio: 2 / 3, 
+                        ),
+                        itemCount: filteredGames.length,
+                        itemBuilder: (_, i) {
+                          return _buildGameCard(filteredGames[i]);
+                        },
+                      )
+                    : ListView.builder(
+                        // 💡 FIX 1: Add shrinkWrap and physics to resolve constraint issue
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: filteredGames.length,
+                        itemBuilder: (_, i) {
+                          return _buildGameListTile(filteredGames[i]);
+                        },
+                      ),
               ),
             ],
           ),
@@ -241,7 +274,7 @@ class _MyCollectionPageState extends State<MyCollectionPage> {
     );
   }
   
-  // --- Game Card Component Translation (Unchanged) ---
+  // --- Game Card Component Translation (Grid View Tile) ---
   Widget _buildGameCard(BoardGame game) {
     // Card styling to match the dark theme and hover effect intent
     return InkWell(
@@ -317,6 +350,64 @@ class _MyCollectionPageState extends State<MyCollectionPage> {
     );
   }
   
+  // 💡 NEW: Game List Tile (List View Mode)
+  Widget _buildGameListTile(BoardGame game) {
+    const Color grayText = Color(0xFF8F98A0);
+
+    return InkWell( // Use InkWell for better tap feedback
+      onTap: () {
+        // TODO: Implement navigation to Game Detail Page
+      },
+      child: Card(
+        margin: const EdgeInsets.only(bottom: 10),
+        color: const Color(0xFF171A21),
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: ListTile(
+          contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+          leading: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.network(
+              game.thumbnailUrl.isEmpty ? 'https://via.placeholder.com/60' : game.thumbnailUrl,
+              width: 60, // Slightly larger image
+              height: 60,
+              fit: BoxFit.cover,
+              errorBuilder: (c, o, s) => Container( // Handle image failure gracefully
+                width: 60, height: 60, 
+                color: Colors.grey[700], 
+                child: const Icon(Icons.category, color: Colors.white54),
+              ),
+            ),
+          ),
+          title: Text(
+            game.name, 
+            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)
+          ),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                game.category,
+                style: TextStyle(color: grayText, fontSize: 12),
+              ),
+              const SizedBox(height: 4),
+              Row( // Combining time and player count
+                children: [
+                  _buildInfoRow(LucideIcons.clock, '${game.playingTime} min'),
+                  const SizedBox(width: 12),
+                  _buildInfoRow(LucideIcons.users, '${game.minPlayers}-${game.maxPlayers}'),
+                ],
+              ),
+            ],
+          ),
+          trailing: const Icon(Icons.chevron_right, color: Color(0xFF8F98A0)),
+        ),
+      ),
+    );
+  }
+
+  // --- Helper Row (Used by both views) ---
   Widget _buildInfoRow(IconData icon, String text) {
     return Row(
       children: [
@@ -330,18 +421,14 @@ class _MyCollectionPageState extends State<MyCollectionPage> {
   // --- Main Build Method (Reorganized to use NestedScrollView) ---
   @override
   Widget build(BuildContext context) {
-    // The main background color from the React component's background: #0e141b
     const Color primaryBackgroundColor = Color(0xFF0E141B);
     
     return Scaffold(
       backgroundColor: primaryBackgroundColor,
-      // We are moving the header logic into the body as a custom scroll view
-      // because the design needs a sticky, complex header separate from the AppBar.
       body: NestedScrollView(
         headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
           return [
             SliverAppBar(
-              // Using a flexible space to embed the CollectionsHeader design
               automaticallyImplyLeading: false,
               expandedHeight: 130.0, 
               pinned: true,
@@ -349,13 +436,11 @@ class _MyCollectionPageState extends State<MyCollectionPage> {
               backgroundColor: primaryBackgroundColor,
               flexibleSpace: FlexibleSpaceBar(
                 collapseMode: CollapseMode.pin,
-                // 💡 NEW: Call the instance method
                 background: _buildCollectionsHeader(context),
               ),
             ),
           ];
         },
-        // 💡 NEW: Call the instance method
         body: _buildGameGrid(),
       ),
     );
