@@ -1,4 +1,4 @@
-// lib/pages/my_collection.dart (TRANSLATED DESIGN)
+// lib/pages/my_collection.dart (WITH FUNCTIONAL SEARCH FILTER)
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart'; // Using lucide_icons for icons like Search, Sliders, etc.
@@ -6,43 +6,45 @@ import '../services/game_service.dart';
 import '../models/board_game.dart'; 
 import 'catalog_page.dart';
 
-class MyCollectionPage extends StatelessWidget { 
+// 💡 CHANGE: Convert StatelessWidget to StatefulWidget
+class MyCollectionPage extends StatefulWidget { 
   const MyCollectionPage({super.key}); 
 
   @override
-  Widget build(BuildContext context) {
-    // The main background color from the React component's background: #0e141b
-    const Color primaryBackgroundColor = Color(0xFF0E141B);
-    
-    return Scaffold(
-      backgroundColor: primaryBackgroundColor,
-      // We are moving the header logic into the body as a custom scroll view
-      // because the design needs a sticky, complex header separate from the AppBar.
-      body: NestedScrollView(
-        headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
-          return [
-            SliverAppBar(
-              // Using a flexible space to embed the CollectionsHeader design
-              automaticallyImplyLeading: false,
-              expandedHeight: 130.0, 
-              pinned: true,
-              floating: true,
-              backgroundColor: primaryBackgroundColor,
-              flexibleSpace: FlexibleSpaceBar(
-                collapseMode: CollapseMode.pin,
-                background: _buildCollectionsHeader(context),
-              ),
-            ),
-          ];
-        },
-        body: _buildGameGrid(),
-      ),
-    );
+  State<MyCollectionPage> createState() => _MyCollectionPageState(); 
+}
+
+class _MyCollectionPageState extends State<MyCollectionPage> {
+  // --- State Variables ---
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+  // Note: List/Grid view state is omitted for now, focusing on search.
+
+  @override
+  void initState() {
+    super.initState();
+    // 💡 NEW: Listener to update state whenever text changes
+    _searchController.addListener(_updateSearchQuery);
+  }
+  
+  void _updateSearchQuery() {
+    // Only call setState if the query actually changed to prevent excessive rebuilding
+    if (_searchQuery != _searchController.text) {
+      setState(() {
+        _searchQuery = _searchController.text.trim();
+      });
+    }
   }
 
-  // --- Header Component Translation ---
+  @override
+  void dispose() {
+    _searchController.removeListener(_updateSearchQuery);
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  // --- Header Component Translation (Now a method inside the State class) ---
   Widget _buildCollectionsHeader(BuildContext context) {
-    // Colors based on React/Tailwind component
     const Color headerBg = Color(0xFF171A21);
     const Color borderColor = Color(0xFF2A3F5F);
     const Color inputBg = Color(0xFF0E141B);
@@ -95,21 +97,25 @@ class MyCollectionPage extends StatelessWidget {
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: borderColor),
                     ),
-                    child: const TextField(
-                      style: TextStyle(color: Colors.white),
+                    child: TextField(
+                      // 💡 NEW: Use the controller to manage input
+                      controller: _searchController, 
+                      style: const TextStyle(color: Colors.white),
                       decoration: InputDecoration(
                         hintText: "Search your collection...",
-                        hintStyle: TextStyle(color: grayText, fontSize: 14),
-                        prefixIcon: Icon(LucideIcons.search, size: 16, color: grayText),
+                        hintStyle: const TextStyle(color: grayText, fontSize: 14),
+                        prefixIcon: const Icon(LucideIcons.search, size: 16, color: grayText),
                         border: InputBorder.none,
-                        contentPadding: EdgeInsets.symmetric(vertical: 8),
+                        contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
                       ),
+                      // 💡 Usability: Clear search button
+                      textInputAction: TextInputAction.search,
                     ),
                   ),
                 ),
                 const SizedBox(width: 8),
 
-                // Filters and View Toggles
+                // Filters and View Toggles (Unchanged for now)
                 SizedBox(
                   height: 40,
                   child: Row(
@@ -159,7 +165,7 @@ class MyCollectionPage extends StatelessWidget {
     );
   }
 
-  // --- Game Grid Component Translation (Updates the counter display) ---
+  // --- Game Grid Component Translation (Now filters the stream data) ---
   Widget _buildGameGrid() {
     return StreamBuilder<List<BoardGame>>(
       stream: GameService.getUserCollectionGames(),
@@ -173,7 +179,25 @@ class MyCollectionPage extends StatelessWidget {
 
         final games = snapshot.data ?? [];
         
-        if (games.isEmpty) {
+        // 💡 NEW: Filtering Logic
+        var filteredGames = games.where((game) {
+          final query = _searchQuery.toLowerCase();
+          
+          // Filter by name and category (case-insensitive)
+          return game.name.toLowerCase().contains(query) || 
+                 game.category.toLowerCase().contains(query);
+        }).toList();
+
+        if (filteredGames.isEmpty && _searchQuery.isNotEmpty) {
+          // Show message if search returns no results
+          return Center(
+            child: Text(
+              "No games found matching '$_searchQuery'.",
+              style: GoogleFonts.poppins(color: const Color(0xFF8F98A0), fontSize: 16),
+            ),
+          );
+        } else if (games.isEmpty) {
+          // Show message if collection is completely empty
           return Center(
             child: Text(
               "Your collection is empty. Add some games!",
@@ -182,14 +206,15 @@ class MyCollectionPage extends StatelessWidget {
           );
         }
         
+        // 💡 Use filteredGames for display count and grid
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Game Count Indicator - Now uses actual stream data
+              // Game Count Indicator
               Text(
-                "${games.length} games in collection", 
+                "${filteredGames.length} games in collection", 
                 style: const TextStyle(color: Color(0xFF8F98A0), fontSize: 14),
               ),
               const SizedBox(height: 12),
@@ -198,14 +223,14 @@ class MyCollectionPage extends StatelessWidget {
               Expanded(
                 child: GridView.builder(
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2, // Default for small screen
+                    crossAxisCount: 2, 
                     mainAxisSpacing: 16,
                     crossAxisSpacing: 16,
-                    childAspectRatio: 2 / 3, // Matches the aspect ratio in the React code
+                    childAspectRatio: 2 / 3, 
                   ),
-                  itemCount: games.length,
+                  itemCount: filteredGames.length,
                   itemBuilder: (_, i) {
-                    return _buildGameCard(games[i]);
+                    return _buildGameCard(filteredGames[i]);
                   },
                 ),
               ),
@@ -216,7 +241,7 @@ class MyCollectionPage extends StatelessWidget {
     );
   }
   
-  // --- Game Card Component Translation ---
+  // --- Game Card Component Translation (Unchanged) ---
   Widget _buildGameCard(BoardGame game) {
     // Card styling to match the dark theme and hover effect intent
     return InkWell(
@@ -299,6 +324,40 @@ class MyCollectionPage extends StatelessWidget {
         const SizedBox(width: 4),
         Text(text, style: const TextStyle(color: Color(0xFF8F98A0), fontSize: 10)),
       ],
+    );
+  }
+
+  // --- Main Build Method (Reorganized to use NestedScrollView) ---
+  @override
+  Widget build(BuildContext context) {
+    // The main background color from the React component's background: #0e141b
+    const Color primaryBackgroundColor = Color(0xFF0E141B);
+    
+    return Scaffold(
+      backgroundColor: primaryBackgroundColor,
+      // We are moving the header logic into the body as a custom scroll view
+      // because the design needs a sticky, complex header separate from the AppBar.
+      body: NestedScrollView(
+        headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
+          return [
+            SliverAppBar(
+              // Using a flexible space to embed the CollectionsHeader design
+              automaticallyImplyLeading: false,
+              expandedHeight: 130.0, 
+              pinned: true,
+              floating: true,
+              backgroundColor: primaryBackgroundColor,
+              flexibleSpace: FlexibleSpaceBar(
+                collapseMode: CollapseMode.pin,
+                // 💡 NEW: Call the instance method
+                background: _buildCollectionsHeader(context),
+              ),
+            ),
+          ];
+        },
+        // 💡 NEW: Call the instance method
+        body: _buildGameGrid(),
+      ),
     );
   }
 }
