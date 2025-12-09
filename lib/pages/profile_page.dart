@@ -1,9 +1,9 @@
 // lib/pages/profile_page.dart (FINAL COMPLETE VERSION)
 import 'package:flutter/material.dart';
-import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
+//import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:image_picker/image_picker.dart';
-import 'dart:io';
-import 'package:firebase_storage/firebase_storage.dart';
+//import 'dart:io';
+//import 'package:firebase_storage/firebase_storage.dart';
 import '../services/profile_service.dart'; 
 import '../services/game_service.dart'; 
 import '../models/board_game.dart'; 

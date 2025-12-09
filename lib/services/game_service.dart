@@ -87,7 +87,7 @@ class GameService {
         .snapshots() 
         .map((snapshot) {
           return snapshot.docs
-              .map((doc) => BoardGame.fromFirestore(doc.data()!))
+              .map((doc) => BoardGame.fromFirestore(doc.data()))
               .toList();
         });
   }
