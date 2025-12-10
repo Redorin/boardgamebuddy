@@ -313,7 +313,7 @@ class _DiscoverPageState extends State<DiscoverPage> {
                       children: [
                         _buildTag(LucideIcons.shapes, game.category),
                         const SizedBox(width: 10),
-                        _buildTag(LucideIcons.timer, "${game.playingTime} min"),
+                        _buildTag(LucideIcons.timer, "${game.playerTime} min"),
                       ],
                     ),
                   ],
@@ -407,7 +407,7 @@ class GameDetailDrawer extends StatelessWidget {
                   crossAxisSpacing: 12,
                   children: [
                     _buildStatCard(LucideIcons.users, "Players", "${game.minPlayers}-${game.maxPlayers}", Colors.blue),
-                    _buildStatCard(LucideIcons.timer, "Play Time", "${game.playingTime} min", Colors.purple),
+                    _buildStatCard(LucideIcons.timer, "Play Time", "${game.playerTime} min", Colors.purple),
                     _buildStatCard(LucideIcons.shapes, "Genre", game.category, Colors.orange),
                     _buildStatCard(LucideIcons.zap, "Difficulty", "Medium", Colors.green),
                   ],

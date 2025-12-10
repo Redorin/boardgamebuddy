@@ -32,49 +32,49 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyBPEViKbMVZ4ICJDb-8GdZO0WYRU_zXc4E',
-    appId: '1:527799347898:web:5641b2bab4d7cb5a817083',
-    messagingSenderId: '527799347898',
-    projectId: 'boardgamebuddy-9ebc3',
-    authDomain: 'boardgamebuddy-9ebc3.firebaseapp.com',
-    storageBucket: 'boardgamebuddy-9ebc3.firebasestorage.app',
-    measurementId: 'G-8Y259MM5EZ',
+    apiKey: 'AIzaSyBNdWbmaVafT62FueXihWMRZwCFT3rJ-4U',
+    appId: '1:710543089144:web:b178d358e20ee1e4dc4a0d',
+    messagingSenderId: '710543089144',
+    projectId: 'boardgamebuddy-v2',
+    authDomain: 'boardgamebuddy-v2.firebaseapp.com',
+    storageBucket: 'boardgamebuddy-v2.firebasestorage.app',
+    measurementId: 'G-6PM8R6Q103',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyAmJqiCYFikMwZnYu1lZ8uy5oBzSUowcFI',
-    appId: '1:527799347898:android:3277e23591c458c4817083',
-    messagingSenderId: '527799347898',
-    projectId: 'boardgamebuddy-9ebc3',
-    storageBucket: 'boardgamebuddy-9ebc3.firebasestorage.app',
+    apiKey: 'AIzaSyA8SoM8FrJ586rHxwnkS6TiHzrKnVTtXoc',
+    appId: '1:710543089144:android:7c7ffb260d08a4eedc4a0d',
+    messagingSenderId: '710543089144',
+    projectId: 'boardgamebuddy-v2',
+    storageBucket: 'boardgamebuddy-v2.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyDIV5eq42mruy9EfPGz62avBJBCMIOflTk',
-    appId: '1:527799347898:ios:48d4b851ffcdd747817083',
-    messagingSenderId: '527799347898',
-    projectId: 'boardgamebuddy-9ebc3',
-    storageBucket: 'boardgamebuddy-9ebc3.firebasestorage.app',
+    apiKey: 'AIzaSyDSqMeibZDei09jDfr5R1dXkto7b4Hcv6M',
+    appId: '1:710543089144:ios:2f78123098cd540fdc4a0d',
+    messagingSenderId: '710543089144',
+    projectId: 'boardgamebuddy-v2',
+    storageBucket: 'boardgamebuddy-v2.firebasestorage.app',
     iosBundleId: 'com.example.boardgame',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyDIV5eq42mruy9EfPGz62avBJBCMIOflTk',
-    appId: '1:527799347898:ios:48d4b851ffcdd747817083',
-    messagingSenderId: '527799347898',
-    projectId: 'boardgamebuddy-9ebc3',
-    storageBucket: 'boardgamebuddy-9ebc3.firebasestorage.app',
+    apiKey: 'AIzaSyDSqMeibZDei09jDfr5R1dXkto7b4Hcv6M',
+    appId: '1:710543089144:ios:2f78123098cd540fdc4a0d',
+    messagingSenderId: '710543089144',
+    projectId: 'boardgamebuddy-v2',
+    storageBucket: 'boardgamebuddy-v2.firebasestorage.app',
     iosBundleId: 'com.example.boardgame',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyBPEViKbMVZ4ICJDb-8GdZO0WYRU_zXc4E',
-    appId: '1:527799347898:web:cb013c005c02221c817083',
-    messagingSenderId: '527799347898',
-    projectId: 'boardgamebuddy-9ebc3',
-    authDomain: 'boardgamebuddy-9ebc3.firebaseapp.com',
-    storageBucket: 'boardgamebuddy-9ebc3.firebasestorage.app',
-    measurementId: 'G-PNMXVT4TN2',
+    apiKey: 'AIzaSyBNdWbmaVafT62FueXihWMRZwCFT3rJ-4U',
+    appId: '1:710543089144:web:800e7c607fa81e5ddc4a0d',
+    messagingSenderId: '710543089144',
+    projectId: 'boardgamebuddy-v2',
+    authDomain: 'boardgamebuddy-v2.firebaseapp.com',
+    storageBucket: 'boardgamebuddy-v2.firebasestorage.app',
+    measurementId: 'G-24YME9Q4KY',
   );
 
 }

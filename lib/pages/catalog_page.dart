@@ -191,7 +191,7 @@ class GameCatalogCard extends StatelessWidget {
                       style: const TextStyle(color: Colors.white70, fontSize: 12),
                     ),
                     Text(
-                      '${game.playingTime} min',
+                      '${game.playerTime} min',
                       style: const TextStyle(color: Colors.white70, fontSize: 12),
                     ),
                   ],

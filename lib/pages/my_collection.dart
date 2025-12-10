@@ -343,7 +343,7 @@ class _MyCollectionPageState extends State<MyCollectionPage> {
                       ),
                       const SizedBox(height: 4),
                       _buildInfoRow(LucideIcons.users, '${game.minPlayers}-${game.maxPlayers} Players'),
-                      _buildInfoRow(LucideIcons.clock, '${game.playingTime} min'),
+                      _buildInfoRow(LucideIcons.clock, '${game.playerTime} min'),
                     ],
                   ),
                 ),
@@ -403,7 +403,7 @@ class _MyCollectionPageState extends State<MyCollectionPage> {
               const SizedBox(height: 4),
               Row( // Combining time and player count
                 children: [
-                  _buildInfoRow(LucideIcons.clock, '${game.playingTime} min'),
+                  _buildInfoRow(LucideIcons.clock, '${game.playerTime} min'),
                   const SizedBox(width: 12),
                   _buildInfoRow(LucideIcons.users, '${game.minPlayers}-${game.maxPlayers}'),
                 ],

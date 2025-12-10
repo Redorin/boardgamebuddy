@@ -69,7 +69,7 @@ class GameDetailPage extends StatelessWidget {
               crossAxisSpacing: 12,
               children: [
                 _buildStatCard(LucideIcons.users, "Players", "${game.minPlayers}-${game.maxPlayers}", Colors.blue),
-                _buildStatCard(LucideIcons.timer, "Play Time", "${game.playingTime} min", Colors.purple),
+                _buildStatCard(LucideIcons.timer, "Play Time", "${game.playerTime} min", Colors.purple),
                 _buildStatCard(LucideIcons.shapes, "Genre", game.category, Colors.orange),
                 _buildStatCard(LucideIcons.zap, "Difficulty", "Medium", Colors.green),
               ],

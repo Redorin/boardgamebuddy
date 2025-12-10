@@ -6,7 +6,7 @@ class BoardGame {
   final String thumbnailUrl;
   final int minPlayers;
   final int maxPlayers;
-  final int playingTime;
+  final int playerTime;
   final String category; // Added for catalog filtering
 
   BoardGame({
@@ -16,7 +16,7 @@ class BoardGame {
     required this.thumbnailUrl,
     required this.minPlayers,
     required this.maxPlayers,
-    required this.playingTime,
+    required this.playerTime,
     required this.category, // New field
   });
 
@@ -29,7 +29,7 @@ class BoardGame {
       'thumbnailUrl': thumbnailUrl,
       'minPlayers': minPlayers,
       'maxPlayers': maxPlayers,
-      'playingTime': playingTime,
+      'playerTime': playerTime,
       'category': category,
     };
   }
@@ -46,7 +46,7 @@ class BoardGame {
     // Non-nullable number fields already have fallbacks, but ensure they handle null:
     minPlayers: (data['minPlayers'] as int?) ?? 1, 
     maxPlayers: (data['maxPlayers'] as int?) ?? 4,
-    playingTime: (data['playingTime'] as int?) ?? 60,
+    playerTime: (data['playerTime'] as int?) ?? 60,
     category: data['category'] as String? ?? 'General', // Fallback Category
   );
 }
