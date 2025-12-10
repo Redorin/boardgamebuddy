@@ -93,7 +93,7 @@ class _HomePageState extends State<HomePage> {
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.search), label: "Discover"),
           BottomNavigationBarItem(icon: Icon(Icons.collections), label: "Collection"),
-          BottomNavigationBarItem(icon: Icon(Icons.group), label: "Friends"),
+          BottomNavigationBarItem(icon: Icon(Icons.group), label: "Find Players"),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: "Profile"),
         ],
       ),

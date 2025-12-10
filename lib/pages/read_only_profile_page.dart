@@ -1,9 +1,8 @@
-// lib/pages/read_only_profile_page.dart (FIXED: Direct Stream Consumption)
+// lib/pages/read_only_profile_page.dart (FINAL: FRIEND REQUESTS)
 import 'package:flutter/material.dart';
-import 'package:lucide_icons/lucide_icons.dart';
 import '../utils/avatar_urls.dart';
 import '../services/profile_service.dart'; 
-import 'profile_page.dart'; // Import for UserProfile model
+import 'profile_page.dart'; // Import models (assuming UserProfile and FavoriteGame models are defined here)
 
 class ReadOnlyProfilePage extends StatefulWidget {
   final String userId; 
@@ -14,20 +13,12 @@ class ReadOnlyProfilePage extends StatefulWidget {
 }
 
 class _ReadOnlyProfilePageState extends State<ReadOnlyProfilePage> {
-  // 💡 HELPER: Convert Firestore Map to UserProfile
+
   UserProfile _mapDataToProfile(Map<String, dynamic>? data) {
     if (data == null || data.isEmpty) {
-      return UserProfile(
-        displayName: 'Unknown User',
-        profileImage: AVATAR_URLS.first,
-        aboutMe: "No bio available.",
-        preferredGenres: [],
-        topGenre: 'N/A',
-        ownedGamesCount: 0,
-        favoriteGames: [],
-      );
+      return UserProfile(displayName: 'Unknown User', profileImage: AVATAR_URLS.first, aboutMe: "No bio available.", preferredGenres: [], topGenre: 'N/A', ownedGamesCount: 0, favoriteGames: []);
     }
-
+    
     final List<String> genres = (data['preferredGenres'] as List?)?.map((e) => e.toString()).toList() ?? [];
     final int gamesCount = (data['ownedGamesCount'] as num?)?.toInt() ?? 0;
     String savedImageUrl = data['profileImage'] as String? ?? AVATAR_URLS.first;
@@ -35,6 +26,7 @@ class _ReadOnlyProfilePageState extends State<ReadOnlyProfilePage> {
     List<FavoriteGame> fetchedFavorites = [];
     if (data['favoriteGames'] != null) {
       fetchedFavorites = (data['favoriteGames'] as List).map((item) {
+        // NOTE: Assuming FavoriteGame.fromMap is available via profile_page.dart import
         return FavoriteGame.fromMap(item as Map<String, dynamic>);
       }).toList();
     }
@@ -56,13 +48,9 @@ class _ReadOnlyProfilePageState extends State<ReadOnlyProfilePage> {
       stream: ProfileService.getProfileStreamById(widget.userId),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            backgroundColor: Color(0xff0E141B),
-            body: Center(child: CircularProgressIndicator()),
-          );
+          return const Scaffold(backgroundColor: Color(0xff0E141B), body: Center(child: CircularProgressIndicator()));
         }
 
-        // 💡 DATA MAPPING: Done directly in build, no setState side effects
         final UserProfile profile = _mapDataToProfile(snapshot.data);
 
         return Scaffold(
@@ -79,37 +67,56 @@ class _ReadOnlyProfilePageState extends State<ReadOnlyProfilePage> {
                 CircleAvatar(radius: 60, backgroundImage: NetworkImage(profile.profileImage)),
                 const SizedBox(height: 16),
                 Text(profile.displayName, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white)),
-                const SizedBox(height: 8),
-                // Show partial ID for verification
-                Text("User ID: ${widget.userId.substring(0, widget.userId.length > 6 ? 6 : widget.userId.length)}...", style: const TextStyle(color: Colors.grey)),
                 
                 const SizedBox(height: 24),
                 
-                // FRIEND ACTION BUTTON
+                // FRIEND ACTION BUTTON LOGIC
                 StreamBuilder<bool>(
                   stream: ProfileService.isFriend(widget.userId),
                   builder: (context, friendSnapshot) {
                     final isFriend = friendSnapshot.data ?? false;
-                    return SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: () async {
-                          if (isFriend) {
-                            await ProfileService.removeFriend(widget.userId);
+
+                    if (isFriend) {
+                      return SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: () async {
+                            // 💡 CALLS THE DEFINED METHOD
+                            await ProfileService.removeFriend(widget.userId); 
                             if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Friend removed.")));
-                          } else {
-                            await ProfileService.addFriend(widget.userId, profile.displayName, profile.profileImage);
-                            if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Friend added!"), backgroundColor: Colors.green));
-                          }
-                        },
-                        icon: Icon(isFriend ? Icons.person_remove : Icons.person_add, color: Colors.white),
-                        label: Text(isFriend ? "Remove Friend" : "Add Friend", style: const TextStyle(color: Colors.white)),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: isFriend ? Colors.redAccent : Colors.deepPurple,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          },
+                          icon: const Icon(Icons.person_remove, color: Colors.white),
+                          label: const Text("Remove Friend", style: TextStyle(color: Colors.white)),
+                          style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, padding: const EdgeInsets.symmetric(vertical: 16)),
                         ),
-                      ),
+                      );
+                    }
+                    
+                    // If not friends, check if a request is already sent
+                    return StreamBuilder<bool>(
+                      stream: ProfileService.isRequestSent(widget.userId),
+                      builder: (context, requestSnapshot) {
+                        final isRequestPending = requestSnapshot.data ?? false;
+                        
+                        return SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: isRequestPending ? null : () async {
+                              final senderName = profile.displayName;
+                              final senderImage = profile.profileImage;
+                              
+                              await ProfileService.sendFriendRequest(widget.userId, senderName, senderImage);
+                              if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Friend request sent!"), backgroundColor: Colors.deepPurple));
+                            },
+                            icon: Icon(isRequestPending ? Icons.check : Icons.person_add, color: Colors.white),
+                            label: Text(isRequestPending ? "Request Sent" : "Send Friend Request", style: const TextStyle(color: Colors.white)),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: isRequestPending ? Colors.blueGrey : Colors.deepPurple,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                            ),
+                          ),
+                        );
+                      },
                     );
                   }
                 ),
@@ -149,23 +156,10 @@ class _ReadOnlyProfilePageState extends State<ReadOnlyProfilePage> {
                     const SizedBox(height: 24),
                     const Align(alignment: Alignment.centerLeft, child: Text("Top Favorites", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold))),
                     const SizedBox(height: 12),
-                    SizedBox(
-                      height: 120,
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: profile.favoriteGames.length,
-                        itemBuilder: (context, index) {
+                    SizedBox(height: 120, child: ListView.builder(scrollDirection: Axis.horizontal, itemCount: profile.favoriteGames.length, itemBuilder: (context, index) {
                           final game = profile.favoriteGames[index];
-                          return Container(
-                            margin: const EdgeInsets.only(right: 12),
-                            width: 90,
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: Image.network(game.image, fit: BoxFit.cover),
-                            ),
-                          );
-                        },
-                      ),
+                          return Container(margin: const EdgeInsets.only(right: 12), width: 90, child: ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.network(game.image, fit: BoxFit.cover)));
+                        })
                     ),
                  ]
               ],

@@ -1,10 +1,8 @@
-// lib/services/profile_service.dart (UPDATED WITH FRIEND SYSTEM)
+// lib/services/profile_service.dart (FINAL, FULLY DEFINED FOR FRIEND SYSTEM)
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:async';
 import 'package:geolocator/geolocator.dart'; 
-import 'package:image_picker/image_picker.dart'; 
-import 'dart:convert';
 
 class ProfileService {
   static final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -28,6 +26,7 @@ class ProfileService {
         'displayName': username,
         'preferredGenres': preferredGenres,
         'onboardingComplete': true,
+        'ownedGamesCount': 0, 
         'createdAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
     } catch (e) {
@@ -53,6 +52,7 @@ class ProfileService {
         'aboutMe': aboutMe,
         'preferredGenres': preferredGenres,
         'topGenre': topGenre,
+        'profileImage': profileImage,
         'favoriteGames': favoriteGames, 
         'updatedAt': FieldValue.serverTimestamp(),
       });
@@ -65,6 +65,7 @@ class ProfileService {
           'aboutMe': aboutMe,
           'preferredGenres': preferredGenres,
           'topGenre': topGenre,
+          'profileImage': profileImage,
           'favoriteGames': favoriteGames,
           'updatedAt': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
@@ -81,15 +82,15 @@ class ProfileService {
     });
   }
   
-  // 💡 NEW: 3.5. STREAM PROFILE BY ID (For viewing other players)
+  // 3.5. STREAM PROFILE BY ID (For viewing other players)
   static Stream<Map<String, dynamic>> getProfileStreamById(String userId) {
-    if (userId.isEmpty) return Stream.value({});
+    if (userId == null) return Stream.value({});
     return _db.collection('users').doc(userId).snapshots().map((snapshot) {
       return snapshot.exists ? (snapshot.data() ?? {}) : {};
     });
   }
   
-  // 4. Fetch Multiple Profiles
+  // 4. Fetch Multiple Profiles (Used for potential future friend list hydration)
   static Future<Map<String, Map<String, dynamic>>> getProfilesByIds(List<String> profileIds) async {
     if (profileIds.isEmpty) return {};
     final profilesData = <String, Map<String, dynamic>>{};
@@ -143,67 +144,140 @@ class ProfileService {
     }
   }
 
-  // 💡 NEW: 7. ADD FRIEND
-  static Future<void> addFriend(String friendId, String displayName, String profileImage) async {
-    // 1. Get current user ID safely
-    final userId = _auth.currentUser?.uid;
-    if (userId == null) {
-      print("Error: No authenticated user found.");
-      return;
-    }
-    
-    // 2. Validate inputs
-    if (friendId.isEmpty) {
-       print("Error: Friend ID is empty.");
-       return;
-    }
+  // Helper to get the friends subcollection reference
+  static CollectionReference? _getFriendsCollectionRef() {
+    final userDocRef = _getUserDocRef();
+    if (userDocRef == null) return null;
+    return userDocRef.collection('friends');
+  }
 
-    final userDocRef = _db.collection('users').doc(userId);
-    
+  // 💡 7. SEND FRIEND REQUEST
+  static Future<void> sendFriendRequest(String targetId, String senderName, String senderImage) async {
+    final senderId = _auth.currentUser?.uid;
+    if (senderId == null || targetId.isEmpty) return;
+
+    final targetRequestRef = _db.collection('users').doc(targetId).collection('friendRequests').doc(senderId);
+
     try {
-      // 3. Write to the subcollection
-      await userDocRef.collection('friends').doc(friendId).set({
-        'id': friendId,
-        'displayName': displayName,
-        'profileImage': profileImage,
-        'addedAt': FieldValue.serverTimestamp(),
+      await targetRequestRef.set({
+        'senderId': senderId,
+        'senderName': senderName,
+        'senderImage': senderImage,
+        'sentAt': FieldValue.serverTimestamp(),
       });
     } catch (e) {
-      print("Error adding friend: $e");
+      print("Error sending friend request: $e");
     }
   }
 
-  // 8. REMOVE FRIEND
-  static Future<void> removeFriend(String friendId) async {
-    final userDocRef = _getUserDocRef();
-    if (userDocRef == null) return;
-    try {
-      await userDocRef.collection('friends').doc(friendId).delete();
-    } catch (e) {
-      print("Error removing friend: $e");
-    }
-  }
+  // 💡 8. CHECK IF REQUEST IS PENDING (Called isRequestSent in UI)
+  static Stream<bool> isRequestSent(String targetId) {
+    final senderId = _auth.currentUser?.uid;
+    if (senderId == null || targetId.isEmpty) return Stream.value(false);
 
-  // 9. CHECK IF FRIEND (Stream)
-  static Stream<bool> isFriend(String friendId) {
-    final userDocRef = _getUserDocRef();
-    if (userDocRef == null) return Stream.value(false);
-    
-    return userDocRef.collection('friends').doc(friendId).snapshots().map((snapshot) {
+    return _db.collection('users').doc(targetId).collection('friendRequests').doc(senderId).snapshots().map((snapshot) {
       return snapshot.exists;
     });
   }
 
-  // 10. GET FRIENDS LIST STREAM
-  static Stream<List<Map<String, dynamic>>> getFriendsStream() {
-    final userDocRef = _getUserDocRef();
-    if (userDocRef == null) return Stream.value([]);
+  // 💡 9. ACCEPT FRIEND REQUEST
+  static Future<void> acceptFriendRequest(String senderId, String senderName, String senderImage) async {
+    final currentUserId = _auth.currentUser?.uid;
+    if (currentUserId == null) return;
     
-    return userDocRef.collection('friends')
+    final batch = _db.batch();
+    final currentUserRef = _db.collection('users').doc(currentUserId);
+    final senderUserRef = _db.collection('users').doc(senderId);
+
+    // 1. DELETE the request from the current user's (receiver's) subcollection
+    batch.delete(currentUserRef.collection('friendRequests').doc(senderId));
+
+    // 2. ADD the sender to the current user's 'friends' list
+    batch.set(currentUserRef.collection('friends').doc(senderId), {
+      'id': senderId,
+      'displayName': senderName,
+      'profileImage': senderImage,
+      'addedAt': FieldValue.serverTimestamp(),
+    });
+
+    // 3. ADD the current user (receiver) to the sender's 'friends' list
+    final currentUserSnapshot = await currentUserRef.get();
+    final currentUserName = currentUserSnapshot.data()?['displayName'] ?? 'User';
+    final currentUserImage = currentUserSnapshot.data()?['profileImage'] ?? '';
+    
+    batch.set(senderUserRef.collection('friends').doc(currentUserId), {
+      'id': currentUserId,
+      'displayName': currentUserName,
+      'profileImage': currentUserImage,
+      'addedAt': FieldValue.serverTimestamp(),
+    });
+
+    try {
+      await batch.commit();
+    } catch (e) {
+      print("Error accepting friend request: $e");
+    }
+  }
+
+  // 💡 10. REMOVE FRIEND (Used to remove friend OR decline request)
+  static Future<void> removeFriend(String friendId) async {
+    final userDocRef = _getUserDocRef();
+    if (userDocRef == null) return;
+    
+    final batch = _db.batch();
+    
+    // 1. Attempt to delete from the current user's friendRequests (declining)
+    batch.delete(userDocRef.collection('friendRequests').doc(friendId));
+    
+    // 2. Attempt to delete from the current user's friends list (removing)
+    batch.delete(userDocRef.collection('friends').doc(friendId));
+
+    // 3. Attempt to delete myself from their friends list (removing from both sides)
+    final otherUserRef = _db.collection('users').doc(friendId);
+    // Note: Use a try-catch for the batch.commit if this specific line throws issues in Web
+    batch.delete(otherUserRef.collection('friends').doc(_auth.currentUser!.uid));
+
+    try {
+      await batch.commit();
+    } catch (e) {
+      print("Error removing friend/declining request: $e");
+    }
+  }
+
+
+  // 💡 11. CHECK IF FRIEND (Used to toggle button on read-only profile)
+  static Stream<bool> isFriend(String friendId) {
+    final friendsRef = _getFriendsCollectionRef();
+    if (friendsRef == null) return Stream.value(false);
+    
+    return friendsRef.doc(friendId).snapshots().map((snapshot) {
+      return snapshot.exists;
+    });
+  }
+
+  // 💡 12. GET INCOMING REQUESTS STREAM
+  static Stream<List<Map<String, dynamic>>> getIncomingRequestsStream() {
+    final userId = _auth.currentUser?.uid;
+    if (userId == null) return Stream.value([]);
+    
+    return _db.collection('users').doc(userId).collection('friendRequests')
+        .orderBy('sentAt', descending: true)
+        .snapshots()
+        .map((snapshot) {
+          return snapshot.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
+        });
+  }
+  
+  // 💡 13. GET FRIENDS LIST STREAM
+  static Stream<List<Map<String, dynamic>>> getFriendsStream() {
+    final friendsRef = _getFriendsCollectionRef();
+    if (friendsRef == null) return Stream.value([]);
+    
+    return friendsRef
         .orderBy('displayName')
         .snapshots()
         .map((snapshot) {
-          return snapshot.docs.map((doc) => doc.data()).toList();
+          return snapshot.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
         });
   }
 }
