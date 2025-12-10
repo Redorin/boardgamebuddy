@@ -69,7 +69,7 @@ class _HomePageState extends State<HomePage> {
       case 1:
         return AppBar(title: Text("My Collection", style: GoogleFonts.poppins(fontWeight: FontWeight.w600)), backgroundColor: Colors.deepPurpleAccent, elevation: 0);
       case 2:
-        return AppBar(title: Text("Friends", style: GoogleFonts.poppins(fontWeight: FontWeight.w600)), backgroundColor: Colors.deepPurpleAccent, elevation: 0);
+        return AppBar(title: Text("Find Players", style: GoogleFonts.poppins(fontWeight: FontWeight.w600)), backgroundColor: Colors.deepPurpleAccent, elevation: 0);
       case 3:
         return AppBar(title: Text("Welcome, $_username", style: GoogleFonts.poppins(fontWeight: FontWeight.w600)), backgroundColor: Colors.deepPurpleAccent, elevation: 0);
       default:
