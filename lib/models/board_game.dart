@@ -36,6 +36,9 @@ class BoardGame {
   
   // Factory method to create a BoardGame object from a Firestore document
   factory BoardGame.fromFirestore(Map<String, dynamic> data) {
+  // 💡 FIX: Check for the NEW 'playerTime' first, then fallback to the OLD 'playingTime'
+  final dynamic timeValue = data['playerTime'] ?? data['playingTime'];
+  
   return BoardGame(
     // 🛑 FIX: Use the null-aware operator (??) to provide a fallback empty string or default value.
     id: data['id'] as String? ?? '0', // Fallback ID
@@ -46,8 +49,13 @@ class BoardGame {
     // Non-nullable number fields already have fallbacks, but ensure they handle null:
     minPlayers: (data['minPlayers'] as int?) ?? 1, 
     maxPlayers: (data['maxPlayers'] as int?) ?? 4,
-    playerTime: (data['playerTime'] as int?) ?? 60,
+    
+    // Use the resolved timeValue
+    playerTime: (timeValue as int?) ?? 60,
+    
     category: data['category'] as String? ?? 'General', // Fallback Category
   );
 }
+
+
 }
