@@ -1,4 +1,4 @@
-// lib/pages/player_finder.dart (FIXED: READS PUBLIC PROFILES ONLY)
+// lib/pages/player_finder.dart (FIXED: OPTIMIZED READS)
 import 'package:cloud_firestore/cloud_firestore.dart'; 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -10,7 +10,7 @@ class PlayerDisplay {
   final String id;
   final String displayName;
   final String profileImage; 
-  final List<String> preferredGenres; // Uses genres instead of specific game titles
+  final List<String> preferredGenres; 
   final double distance;
   final bool isOnline;
   final int gamesOwned;
@@ -87,7 +87,7 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
     
     // 2. Genres & Count (Read directly from profile fields)
     final genres = (data['preferredGenres'] as List?)?.map((e) => e.toString()).toList() ?? [];
-    final gamesCount = data['ownedGamesCount'] as int? ?? 0;
+    final gamesCount = (data['ownedGamesCount'] as num?)?.toInt() ?? 0;
 
     // 3. Activity Status
     final lastActive = (data['updatedAt'] as Timestamp?)?.toDate() 
@@ -154,11 +154,13 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
             ),
             const SizedBox(height: 16),
             
-            // 💡 REVISED STREAM: Listen directly to 'users' collection
-            // This works because your rules allow reading /users/{id}
+            // 💡 OPTIMIZED STREAM: Only fetch discoverable users
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
-                stream: FirebaseFirestore.instance.collection('users').snapshots(),
+                // 🛑 NEW QUERY: Filter the stream to only users who completed onboarding
+                stream: FirebaseFirestore.instance.collection('users')
+                          .where('onboardingComplete', isEqualTo: true) // Quota Optimization
+                          .snapshots(),
                 builder: (context, snapshot) {
                   if (snapshot.hasError) {
                     return Center(child: Text('Error: ${snapshot.error}', style: const TextStyle(color: Colors.red)));
@@ -174,7 +176,7 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
                       .where((p) => p.id != FirebaseAuth.instance.currentUser?.uid) 
                       .toList();
 
-                  // 2. Apply Filters
+                  // 2. Apply Filters (Local filtering remains the same)
                   if (_searchQuery.isNotEmpty) {
                     players = players.where((p) => 
                       p.displayName.toLowerCase().contains(_searchQuery.toLowerCase()) ||
@@ -223,6 +225,7 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
       margin: const EdgeInsets.only(bottom: 10),
       color: Colors.white.withOpacity(0.05),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      // TODO: Add onTap navigation back to the ReadOnlyProfilePage (Phase 2, #8)
       child: ListTile(
         leading: CircleAvatar(
           backgroundColor: Colors.grey,
