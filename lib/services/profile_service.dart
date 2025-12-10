@@ -100,6 +100,13 @@ class ProfileService { // <--- THIS is the class the pages are looking for
     }
   }
 
+  static Stream<Map<String, dynamic>> getProfileStreamById(String userId) {
+  if (userId.isEmpty) return Stream.value({});
+  return _db.collection('users').doc(userId).snapshots().map((snapshot) {
+    return snapshot.exists ? (snapshot.data() ?? {}) : {};
+  });
+}
+
   // 5. Update Location
   static Future<void> updateCurrentLocation() async {
     final userDocRef = _getUserDocRef();

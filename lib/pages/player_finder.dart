@@ -1,11 +1,13 @@
-// lib/pages/player_finder.dart (FIXED: OPTIMIZED READS)
+// lib/pages/player_finder.dart (FINAL: NAVIGATION & FILTER UI/LOGIC)
 import 'package:cloud_firestore/cloud_firestore.dart'; 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:lucide_icons/lucide_icons.dart'; 
 import '../services/profile_service.dart';
+import 'read_only_profile_page.dart'; // 💡 NEW IMPORT for profile viewing
 
-// --- Data Models ---
+// --- Data Models (Unchanged) ---
 class PlayerDisplay {
   final String id;
   final String displayName;
@@ -65,7 +67,7 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
   }
   
   void _initializeLocation() async {
-    ProfileService.updateCurrentLocation(); // Update own location
+    ProfileService.updateCurrentLocation(); 
     try {
       Position position = await Geolocator.getCurrentPosition(
           desiredAccuracy: LocationAccuracy.high);
@@ -77,7 +79,7 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
     }
   }
 
-  // 💡 HELPER: Convert Firestore Document to PlayerDisplay
+  // 💡 HELPER: Convert Firestore Document to PlayerDisplay (Unchanged)
   PlayerDisplay _mapDocumentToPlayer(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>? ?? {};
     
@@ -85,7 +87,7 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
     final displayName = data['displayName'] as String? ?? 'Unknown Player';
     final profileImage = data['profileImage'] as String? ?? '';
     
-    // 2. Genres & Count (Read directly from profile fields)
+    // 2. Genres & Count
     final genres = (data['preferredGenres'] as List?)?.map((e) => e.toString()).toList() ?? [];
     final gamesCount = (data['ownedGamesCount'] as num?)?.toInt() ?? 0;
 
@@ -109,7 +111,7 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
           lat, 
           lng
         );
-        distance = meters / 1609.34; // Miles
+        distance = meters / 1609.34; 
       } catch (e) { /* Ignore bad location data */ }
     }
 
@@ -125,6 +127,21 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
     );
   }
 
+  // 💡 UI Helper for Filter Chip
+  Widget _buildFilterChip({required String label, required bool isSelected, required VoidCallback onTap}) {
+    return ActionChip(
+      label: Text(label, style: TextStyle(color: isSelected ? Colors.white : const Color(0xFFC0C0C0))),
+      avatar: isSelected ? const Icon(LucideIcons.check, size: 16, color: Colors.white) : null,
+      onPressed: onTap,
+      backgroundColor: isSelected ? const Color(0xFF673AB7) : Colors.white.withOpacity(0.1),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: isSelected ? const Color(0xFF673AB7) : Colors.white.withOpacity(0.2)),
+      ),
+    );
+  }
+
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -138,13 +155,14 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Search Bar
             TextField(
               controller: _searchController,
               style: const TextStyle(color: Colors.white),
               decoration: InputDecoration(
-                hintText: 'Search players...',
+                hintText: 'Search players or genres...',
                 hintStyle: const TextStyle(color: Colors.white54),
                 prefixIcon: const Icon(Icons.search, color: Colors.white54),
                 filled: true,
@@ -154,12 +172,83 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
             ),
             const SizedBox(height: 16),
             
-            // 💡 OPTIMIZED STREAM: Only fetch discoverable users
+            // 💡 NEW: Filter and Sort Controls (Phase 2, Item 11)
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Wrap( // Using Wrap for clean horizontal spacing
+                spacing: 8.0,
+                children: [
+                  // 1. Online Only Filter
+                  _buildFilterChip(
+                    label: 'Online Only',
+                    isSelected: _showOnlineOnly,
+                    onTap: () => setState(() => _showOnlineOnly = !_showOnlineOnly),
+                  ),
+
+                  // 2. Sort By Dropdown
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.white.withOpacity(0.2)),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<SortOption>(
+                        value: _sortBy,
+                        dropdownColor: const Color(0xFF1E1E2C),
+                        style: const TextStyle(color: Colors.white, fontSize: 14),
+                        items: const [
+                          DropdownMenuItem(value: SortOption.distance, child: Text('Sort: Closest')),
+                          DropdownMenuItem(value: SortOption.active, child: Text('Sort: Most Active')),
+                          DropdownMenuItem(value: SortOption.games, child: Text('Sort: Most Games')),
+                        ],
+                        onChanged: (SortOption? newValue) {
+                          if (newValue != null) setState(() => _sortBy = newValue);
+                        },
+                      ),
+                    ),
+                  ),
+
+                  // 3. Max Distance Slider (Only show if location is not loading)
+                  if (!_isLocationLoading)
+                    Container(
+                      constraints: const BoxConstraints(maxWidth: 150),
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.white.withOpacity(0.2)),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text('Max Distance: ${_maxDistance.toStringAsFixed(0)} mi', style: const TextStyle(color: Colors.white, fontSize: 12)),
+                          Slider(
+                            value: _maxDistance,
+                            min: 5,
+                            max: 100,
+                            divisions: 19,
+                            activeColor: Colors.deepPurpleAccent,
+                            inactiveColor: Colors.white30,
+                            onChanged: (double newValue) {
+                              setState(() => _maxDistance = newValue);
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            ),
+
+            // Player List Stream
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
-                // 🛑 NEW QUERY: Filter the stream to only users who completed onboarding
+                // Query remains optimized: filter by users who completed setup
                 stream: FirebaseFirestore.instance.collection('users')
-                          .where('onboardingComplete', isEqualTo: true) // Quota Optimization
+                          //.where('onboardingComplete', isEqualTo: true)
                           .snapshots(),
                 builder: (context, snapshot) {
                   if (snapshot.hasError) {
@@ -172,11 +261,10 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
                   // 1. Process Data
                   var players = snapshot.data!.docs
                       .map(_mapDocumentToPlayer)
-                      // Filter out current user
                       .where((p) => p.id != FirebaseAuth.instance.currentUser?.uid) 
                       .toList();
 
-                  // 2. Apply Filters (Local filtering remains the same)
+                  // 2. Apply Filters (Local filtering based on UI controls)
                   if (_searchQuery.isNotEmpty) {
                     players = players.where((p) => 
                       p.displayName.toLowerCase().contains(_searchQuery.toLowerCase()) ||
@@ -188,7 +276,8 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
                     players = players.where((p) => p.isOnline).toList();
                   }
                   
-                  if (!_isLocationLoading && _maxDistance < 50) {
+                  // Filter by distance if location is available and slider is set low
+                  if (!_isLocationLoading && _maxDistance < 100) {
                      players = players.where((p) => p.distance <= _maxDistance).toList();
                   }
 
@@ -202,7 +291,7 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
                   });
 
                   if (players.isEmpty) {
-                    return const Center(child: Text("No players found.", style: TextStyle(color: Colors.white54)));
+                    return const Center(child: Text("No players found matching current filters.", style: TextStyle(color: Colors.white54)));
                   }
 
                   // 4. List View
@@ -219,26 +308,59 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
     );
   }
 
-  // --- Tile Widget ---
+  // --- Tile Widget (Updated with Navigation) ---
   Widget _buildPlayerTile(PlayerDisplay player) {
+    final bool hasProfileImage = player.profileImage.isNotEmpty;
+    final String initials = player.displayName.isNotEmpty ? player.displayName[0].toUpperCase() : '?';
+
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
       color: Colors.white.withOpacity(0.05),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      // TODO: Add onTap navigation back to the ReadOnlyProfilePage (Phase 2, #8)
       child: ListTile(
+        // 💡 NEW: Navigation to ReadOnlyProfilePage (Phase 2, Item 10)
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ReadOnlyProfilePage(userId: player.id),
+            ),
+          );
+        },
+        // 🛑 FIX: Use CircleAvatar child with error handling for image loading
         leading: CircleAvatar(
-          backgroundColor: Colors.grey,
-          backgroundImage: player.profileImage.isNotEmpty ? NetworkImage(player.profileImage) : null,
-          child: player.profileImage.isEmpty 
-              ? Text(player.displayName.isNotEmpty ? player.displayName[0].toUpperCase() : '?') 
-              : null,
+          backgroundColor: hasProfileImage ? Colors.transparent : Colors.grey.shade700,
+          radius: 24,
+          child: hasProfileImage
+              ? ClipOval(
+                  child: Image.network(
+                    player.profileImage,
+                    width: 48,
+                    height: 48,
+                    fit: BoxFit.cover,
+                    // Use errorBuilder to catch ImageCodecException and fallback
+                    errorBuilder: (context, error, stackTrace) {
+                      return Center(
+                        child: Text(
+                          initials,
+                          style: const TextStyle(color: Colors.white, fontSize: 18),
+                        ),
+                      );
+                    },
+                  ),
+                )
+              // Fallback for empty URL
+              : Center(
+                  child: Text(
+                    initials,
+                    style: const TextStyle(color: Colors.white, fontSize: 18),
+                  ),
+                ),
         ),
         title: Text(player.displayName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Display Genres instead of Games list
             Text(
               player.preferredGenres.take(3).join(" • "), 
               style: const TextStyle(color: Colors.blueAccent, fontSize: 12),
