@@ -4,8 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../services/game_service.dart';
 import '../models/board_game.dart'; 
-import 'catalog_page.dart';
-import 'home_page.dart'; // Import to access GameDetailDrawer for Discover/Collection (pre-revert state)
+import 'catalog_page.dart'; // Import to access GameDetailDrawer for Discover/Collection (pre-revert state)
 import 'game_detail_page.dart'; // ✅ NEW: Import for the dedicated page
 
 // 💡 NEW: Define the two view modes
