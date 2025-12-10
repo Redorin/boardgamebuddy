@@ -1,9 +1,9 @@
 // lib/pages/profile_page.dart (FINAL, UPDATED FOR USERNAME SYNC)
 import 'package:flutter/material.dart';
 import '../utils/avatar_urls.dart'; // Retained for AVATAR_URLS constant
-import '../services/profile_service.dart'; 
-import '../services/game_service.dart'; 
-import '../models/board_game.dart'; 
+import '../services/profile_service.dart';
+import '../services/game_service.dart';
+import '../models/board_game.dart';
 
 // --- Data Models (Ensure these match your file's structure) ---
 
@@ -72,10 +72,10 @@ class UserProfile {
 class ProfilePage extends StatefulWidget {
   final VoidCallback onLogout;
   // 💡 ADDED: Function to send the display name up to the HomePage AppBar
-  final Function(String) onDisplayNameUpdate; 
+  final Function(String) onDisplayNameUpdate;
 
   const ProfilePage({
-    Key? key, 
+    Key? key,
     required this.onLogout,
     required this.onDisplayNameUpdate, // 💡 REQUIRED
   }) : super(key: key);
@@ -88,7 +88,7 @@ class _ProfilePageState extends State<ProfilePage> {
   bool _isEditing = false;
   late UserProfile _profile;
   late UserProfile _editedProfile;
-  
+
   // Controllers
   late TextEditingController _displayNameController;
   late TextEditingController _aboutMeController;
@@ -96,18 +96,18 @@ class _ProfilePageState extends State<ProfilePage> {
   late TextEditingController _ownedGamesCountController;
   late TextEditingController _newGenreController;
 
-  static const String _defaultProfileImage = ''; 
+  static const String _defaultProfileImage = '';
 
   @override
   void initState() {
     super.initState();
     _profile = UserProfile(
-      displayName: 'Loading...', 
+      displayName: 'Loading...',
       profileImage: _defaultProfileImage,
       aboutMe: "Tell us about your board game passion!",
-      preferredGenres: [], 
-      topGenre: 'Strategy', 
-      ownedGamesCount: 0, 
+      preferredGenres: [],
+      topGenre: 'Strategy',
+      ownedGamesCount: 0,
       favoriteGames: [],
     );
     _editedProfile = _profile.copyWith();
@@ -115,7 +115,9 @@ class _ProfilePageState extends State<ProfilePage> {
     _displayNameController = TextEditingController(text: _profile.displayName);
     _aboutMeController = TextEditingController(text: _profile.aboutMe);
     _topGenreController = TextEditingController(text: _profile.topGenre);
-    _ownedGamesCountController = TextEditingController(text: _profile.ownedGamesCount.toString());
+    _ownedGamesCountController = TextEditingController(
+      text: _profile.ownedGamesCount.toString(),
+    );
     _newGenreController = TextEditingController();
   }
 
@@ -134,41 +136,46 @@ class _ProfilePageState extends State<ProfilePage> {
   void _handleEdit() {
     setState(() {
       _editedProfile = _profile.copyWith(
-        preferredGenres: List.from(_profile.preferredGenres), 
+        preferredGenres: List.from(_profile.preferredGenres),
         favoriteGames: List.from(_profile.favoriteGames),
-        profileImage: _profile.profileImage, // Ensure the current saved image URL is used
+        profileImage:
+            _profile.profileImage, // Ensure the current saved image URL is used
       );
       _displayNameController.text = _editedProfile.displayName;
       _aboutMeController.text = _editedProfile.aboutMe;
       _topGenreController.text = _editedProfile.topGenre;
-      _ownedGamesCountController.text = _editedProfile.ownedGamesCount.toString();
+      _ownedGamesCountController.text = _editedProfile.ownedGamesCount
+          .toString();
       _isEditing = true;
     });
   }
 
-  void _handleSave() async { 
+  void _handleSave() async {
     final newProfile = _editedProfile.copyWith(
       displayName: _displayNameController.text,
       aboutMe: _aboutMeController.text,
       topGenre: _topGenreController.text,
       ownedGamesCount: _profile.ownedGamesCount,
-      preferredGenres: List.from(_editedProfile.preferredGenres), 
+      preferredGenres: List.from(_editedProfile.preferredGenres),
       favoriteGames: List.from(_editedProfile.favoriteGames),
       // Use the potentially new URL from _editedProfile state
-      profileImage: _editedProfile.profileImage, 
+      profileImage: _editedProfile.profileImage,
     );
-    
-    final favoriteGamesMapList = newProfile.favoriteGames.map((g) => g.toMap()).toList();
 
-    await ProfileService.saveProfileEdits( 
+    final favoriteGamesMapList = newProfile.favoriteGames
+        .map((g) => g.toMap())
+        .toList();
+
+    await ProfileService.saveProfileEdits(
       displayName: newProfile.displayName,
       aboutMe: newProfile.aboutMe,
       preferredGenres: newProfile.preferredGenres,
       topGenre: newProfile.topGenre,
-      profileImage: newProfile.profileImage, // Passing the selected URL for saving
-      favoriteGames: favoriteGamesMapList, 
+      profileImage:
+          newProfile.profileImage, // Passing the selected URL for saving
+      favoriteGames: favoriteGamesMapList,
     );
-    
+
     // 💡 SYNCHRONIZE HOMEPAGE AFTER SAVE
     widget.onDisplayNameUpdate(newProfile.displayName);
 
@@ -178,7 +185,10 @@ class _ProfilePageState extends State<ProfilePage> {
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Profile updated!"), backgroundColor: Color(0xFF16A34A)),
+      const SnackBar(
+        content: Text("Profile updated!"),
+        backgroundColor: Color(0xFF16A34A),
+      ),
     );
   }
 
@@ -191,7 +201,8 @@ class _ProfilePageState extends State<ProfilePage> {
 
   void _addGenre(String genre) {
     String trimmedGenre = genre.trim();
-    if (trimmedGenre.isNotEmpty && !_editedProfile.preferredGenres.contains(trimmedGenre)) {
+    if (trimmedGenre.isNotEmpty &&
+        !_editedProfile.preferredGenres.contains(trimmedGenre)) {
       setState(() {
         _editedProfile = _editedProfile.copyWith(
           preferredGenres: [..._editedProfile.preferredGenres, trimmedGenre],
@@ -204,37 +215,45 @@ class _ProfilePageState extends State<ProfilePage> {
   void _removeGenre(String genreToRemove) {
     setState(() {
       _editedProfile = _editedProfile.copyWith(
-        preferredGenres: _editedProfile.preferredGenres.where((g) => g != genreToRemove).toList(),
+        preferredGenres: _editedProfile.preferredGenres
+            .where((g) => g != genreToRemove)
+            .toList(),
       );
     });
   }
 
   void _updateProfileState(Map<String, dynamic> data) async {
     if (data.isNotEmpty) {
-      final List<String> genres = (data['preferredGenres'] as List?)?.map((e) => e.toString()).toList() ?? [];
-      
+      final List<String> genres =
+          (data['preferredGenres'] as List?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          [];
+
       final int realGameCount = (data['ownedGamesCount'] as num?)?.toInt() ?? 0;
-      
+
       List<FavoriteGame> fetchedFavorites = [];
       if (data['favoriteGames'] != null) {
         fetchedFavorites = (data['favoriteGames'] as List).map((item) {
           return FavoriteGame.fromMap(item as Map<String, dynamic>);
         }).toList();
       }
-      
-      String savedImageUrl = data['profileImage'] as String? ?? AVATAR_URLS.first; 
-      String newDisplayName = data['displayName'] as String? ?? _profile.displayName;
-      
+
+      String savedImageUrl =
+          data['profileImage'] as String? ?? AVATAR_URLS.first;
+      String newDisplayName =
+          data['displayName'] as String? ?? _profile.displayName;
+
       // 💡 CALL CALLBACK ON LOAD: Pass the name up to HomePage for the initial load/stream update
       if (newDisplayName != _profile.displayName) {
-          widget.onDisplayNameUpdate(newDisplayName);
+        widget.onDisplayNameUpdate(newDisplayName);
       }
 
       if (!_isEditing) {
         setState(() {
           _profile = _profile.copyWith(
             displayName: newDisplayName,
-            profileImage: savedImageUrl, 
+            profileImage: savedImageUrl,
             aboutMe: data['aboutMe'] as String? ?? _profile.aboutMe,
             preferredGenres: genres,
             topGenre: data['topGenre'] as String? ?? _profile.topGenre,
@@ -253,9 +272,8 @@ class _ProfilePageState extends State<ProfilePage> {
   void _showManageFavoritesDialog() async {
     final List<FavoriteGame>? result = await showDialog<List<FavoriteGame>>(
       context: context,
-      builder: (context) => ManageFavoritesDialog(
-        currentFavorites: _editedProfile.favoriteGames,
-      ),
+      builder: (context) =>
+          ManageFavoritesDialog(currentFavorites: _editedProfile.favoriteGames),
     );
 
     if (result != null) {
@@ -280,28 +298,46 @@ class _ProfilePageState extends State<ProfilePage> {
       });
     }
   }
-  
+
   // --- UI Builder Methods ---
 
   Widget _buildHeaderCard(UserProfile currentProfile) {
-    final String imageUrlToDisplay = currentProfile.profileImage.isNotEmpty 
-        ? currentProfile.profileImage 
-        : AVATAR_URLS.first; 
+    final String imageUrlToDisplay = currentProfile.profileImage.isNotEmpty
+        ? currentProfile.profileImage
+        : AVATAR_URLS.first;
 
     return _buildCard(
       child: Stack(
         children: [
           Positioned(
-            top: 0, right: 0,
+            top: 0,
+            right: 0,
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                if (!_isEditing) 
-                  _buildButton(onPressed: _handleEdit, text: 'Edit Profile', icon: Icons.edit_outlined, backgroundColor: const Color(0xFF2563EB))
+                if (!_isEditing)
+                  _buildButton(
+                    onPressed: _handleEdit,
+                    text: 'Edit Profile',
+                    icon: Icons.edit_outlined,
+                    backgroundColor: const Color(0xFF2563EB),
+                  )
                 else ...[
-                  _buildButton(onPressed: _handleSave, text: 'Save', icon: Icons.save, backgroundColor: const Color(0xFF16A34A)),
+                  _buildButton(
+                    onPressed: _handleSave,
+                    text: 'Save',
+                    icon: Icons.save,
+                    backgroundColor: const Color(0xFF16A34A),
+                  ),
                   const SizedBox(width: 8),
-                  _buildButton(onPressed: _handleCancel, text: 'Cancel', icon: Icons.close, backgroundColor: Colors.transparent, textColor: const Color(0xFF6B7280), borderColor: const Color(0xFFD1D5DB)),
+                  _buildButton(
+                    onPressed: _handleCancel,
+                    text: 'Cancel',
+                    icon: Icons.close,
+                    backgroundColor: Colors.transparent,
+                    textColor: const Color(0xFF6B7280),
+                    borderColor: const Color(0xFFD1D5DB),
+                  ),
                 ],
               ],
             ),
@@ -312,34 +348,84 @@ class _ProfilePageState extends State<ProfilePage> {
               child: Column(
                 children: [
                   GestureDetector(
-                    onTap: _isEditing ? _showAvatarSelectionDialog : null, // Opens selection dialog
+                    onTap: _isEditing
+                        ? _showAvatarSelectionDialog
+                        : null, // Opens selection dialog
                     child: Stack(
                       alignment: Alignment.center,
                       children: [
                         Container(
-                          width: 136, height: 136,
-                          decoration: BoxDecoration(shape: BoxShape.circle, gradient: const LinearGradient(colors: [Color(0xFF3B82F6), Color(0xFFF97316)], begin: Alignment.topLeft, end: Alignment.bottomRight), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 10, offset: const Offset(0, 4))]),
+                          width: 136,
+                          height: 136,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF3B82F6), Color(0xFFF97316)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.2),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
                           padding: const EdgeInsets.all(4),
                           child: CircleAvatar(
-                            backgroundColor: Colors.deepPurpleAccent.shade100, 
+                            backgroundColor: Colors.deepPurpleAccent.shade100,
                             radius: 64,
-                            backgroundImage: NetworkImage(imageUrlToDisplay), 
+                            backgroundImage: NetworkImage(imageUrlToDisplay),
                             child: null,
                           ),
                         ),
                         if (_isEditing)
                           Container(
-                            width: 136, height: 136,
-                            decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.black.withOpacity(0.4)),
-                            child: const Icon(Icons.palette, color: Colors.white, size: 40),
+                            width: 136,
+                            height: 136,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.black.withOpacity(0.4),
+                            ),
+                            child: const Icon(
+                              Icons.palette,
+                              color: Colors.white,
+                              size: 40,
+                            ),
                           ),
                       ],
                     ),
                   ),
                   const SizedBox(height: 16),
-                  _isEditing 
-                    ? SizedBox(width: 250, child: TextField(controller: _displayNameController, textAlign: TextAlign.center, decoration: const InputDecoration(isDense: true, contentPadding: EdgeInsets.symmetric(vertical: 8, horizontal: 10), border: OutlineInputBorder()), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold))) 
-                    : Text(currentProfile.displayName, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF1F2937))),
+                  _isEditing
+                      ? SizedBox(
+                          width: 250,
+                          child: TextField(
+                            controller: _displayNameController,
+                            textAlign: TextAlign.center,
+                            decoration: const InputDecoration(
+                              isDense: true,
+                              contentPadding: EdgeInsets.symmetric(
+                                vertical: 8,
+                                horizontal: 10,
+                              ),
+                              border: OutlineInputBorder(),
+                            ),
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        )
+                      : Text(
+                          currentProfile.displayName,
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF1F2937),
+                          ),
+                        ),
                 ],
               ),
             ),
@@ -357,8 +443,26 @@ class _ProfilePageState extends State<ProfilePage> {
           _buildSectionHeader('About Me', const Color(0xFF2563EB)),
           const SizedBox(height: 12),
           _isEditing
-              ? TextField(controller: _aboutMeController, maxLines: 5, minLines: 3, decoration: InputDecoration(hintText: 'Tell us about yourself...', border: const OutlineInputBorder(), fillColor: Colors.grey[50], filled: true), style: const TextStyle(color: Color(0xFF374151)))
-              : Text(currentProfile.aboutMe, style: const TextStyle(fontSize: 16, color: Color(0xFF374151), height: 1.5)),
+              ? TextField(
+                  controller: _aboutMeController,
+                  maxLines: 5,
+                  minLines: 3,
+                  decoration: InputDecoration(
+                    hintText: 'Tell us about yourself...',
+                    border: const OutlineInputBorder(),
+                    fillColor: Colors.grey[50],
+                    filled: true,
+                  ),
+                  style: const TextStyle(color: Color(0xFF374151)),
+                )
+              : Text(
+                  currentProfile.aboutMe,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    color: Color(0xFF374151),
+                    height: 1.5,
+                  ),
+                ),
         ],
       ),
     );
@@ -374,27 +478,106 @@ class _ProfilePageState extends State<ProfilePage> {
           Container(
             margin: const EdgeInsets.only(bottom: 16),
             child: _isEditing
-                ? SizedBox(width: 200, child: TextField(controller: _topGenreController, decoration: const InputDecoration(isDense: true, contentPadding: EdgeInsets.symmetric(vertical: 8, horizontal: 10), hintText: 'Top genre', border: OutlineInputBorder())))
-                : Container(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), gradient: const LinearGradient(colors: [Color(0xFF2563EB), Color(0xFFF97316)])), child: Text('⭐ ${currentProfile.topGenre}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+                ? SizedBox(
+                    width: 200,
+                    child: TextField(
+                      controller: _topGenreController,
+                      decoration: const InputDecoration(
+                        isDense: true,
+                        contentPadding: EdgeInsets.symmetric(
+                          vertical: 8,
+                          horizontal: 10,
+                        ),
+                        hintText: 'Top genre',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  )
+                : Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(20),
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF2563EB), Color(0xFFF97316)],
+                      ),
+                    ),
+                    child: Text(
+                      '⭐ ${currentProfile.topGenre}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
           ),
           Wrap(
             spacing: 8.0,
             runSpacing: 8.0,
             children: [
-              ...currentProfile.preferredGenres.map((genre) => Container(
-                padding: EdgeInsets.only(left: 12, right: _isEditing ? 4 : 12, top: 6, bottom: 6),
-                decoration: BoxDecoration(color: const Color(0xFFEFF6FF), borderRadius: BorderRadius.circular(20), border: Border.all(color: const Color(0xFF93C5FD))),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(genre, style: const TextStyle(color: Color(0xFF1D4ED8), fontSize: 14)),
-                    if (_isEditing)
-                      InkWell(onTap: () => _removeGenre(genre), borderRadius: BorderRadius.circular(10), child: const Padding(padding: const EdgeInsets.only(left: 8.0, right: 4.0), child: Icon(Icons.close, size: 16, color: Color(0xFFDC2626)))),
-                  ],
+              ...currentProfile.preferredGenres.map(
+                (genre) => Container(
+                  padding: EdgeInsets.only(
+                    left: 12,
+                    right: _isEditing ? 4 : 12,
+                    top: 6,
+                    bottom: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEFF6FF),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: const Color(0xFF93C5FD)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        genre,
+                        style: const TextStyle(
+                          color: Color(0xFF1D4ED8),
+                          fontSize: 14,
+                        ),
+                      ),
+                      if (_isEditing)
+                        InkWell(
+                          onTap: () => _removeGenre(genre),
+                          borderRadius: BorderRadius.circular(10),
+                          child: const Padding(
+                            padding: const EdgeInsets.only(
+                              left: 8.0,
+                              right: 4.0,
+                            ),
+                            child: Icon(
+                              Icons.close,
+                              size: 16,
+                              color: Color(0xFFDC2626),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
-              )),
+              ),
               if (_isEditing)
-                SizedBox(width: 120, height: 32, child: TextField(controller: _newGenreController, decoration: const InputDecoration(hintText: 'Add genre...', isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 4), border: OutlineInputBorder()), onSubmitted: _addGenre)),
+                SizedBox(
+                  width: 120,
+                  height: 32,
+                  child: TextField(
+                    controller: _newGenreController,
+                    decoration: const InputDecoration(
+                      hintText: 'Add genre...',
+                      isDense: true,
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      border: OutlineInputBorder(),
+                    ),
+                    onSubmitted: _addGenre,
+                  ),
+                ),
             ],
           ),
         ],
@@ -415,15 +598,29 @@ class _ProfilePageState extends State<ProfilePage> {
                 _buildButton(
                   onPressed: _showManageFavoritesDialog,
                   icon: Icons.star,
-                  text: 'Manage Top 5', 
-                  backgroundColor: const Color(0xFFFDE047), 
-                  textColor: Colors.black
+                  text: 'Manage Top 5',
+                  backgroundColor: const Color(0xFFFDE047),
+                  textColor: Colors.black,
                 )
               else
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), gradient: const LinearGradient(colors: [Color(0xFFFEF3C7), Color(0xFFFEEADF)])),
-                  child: Text('${currentProfile.ownedGamesCount} Games', style: const TextStyle(color: Color(0xFF1F2937), fontWeight: FontWeight.w600)),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFFEF3C7), Color(0xFFFEEADF)],
+                    ),
+                  ),
+                  child: Text(
+                    '${currentProfile.ownedGamesCount} Games',
+                    style: const TextStyle(
+                      color: Color(0xFF1F2937),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
             ],
           ),
@@ -431,13 +628,21 @@ class _ProfilePageState extends State<ProfilePage> {
           SizedBox(
             height: 180,
             child: currentProfile.favoriteGames.isEmpty
-                ? const Center(child: Text("No favorites selected", style: TextStyle(color: Colors.grey)))
+                ? const Center(
+                    child: Text(
+                      "No favorites selected",
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  )
                 : SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: Row(
                       children: [
                         for (var game in currentProfile.favoriteGames)
-                          Padding(padding: const EdgeInsets.only(right: 12), child: GameCard(game: game)),
+                          Padding(
+                            padding: const EdgeInsets.only(right: 12),
+                            child: GameCard(game: game),
+                          ),
                       ],
                     ),
                   ),
@@ -454,7 +659,14 @@ class _ProfilePageState extends State<ProfilePage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16.0),
-        boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.1), spreadRadius: 2, blurRadius: 8, offset: const Offset(0, 4))],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 2,
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       padding: const EdgeInsets.symmetric(horizontal: 24.0),
       child: Center(
@@ -464,8 +676,13 @@ class _ProfilePageState extends State<ProfilePage> {
             onPressed: widget.onLogout,
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFDC2626),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              textStyle: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
               elevation: 0,
             ),
             child: const Text('Logout', style: TextStyle(color: Colors.white)),
@@ -474,36 +691,85 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
     );
   }
-  
+
   // --- Basic Helpers (Unchanged) ---
-  Widget _buildButton({required VoidCallback onPressed, required String text, required IconData icon, required Color backgroundColor, Color textColor = Colors.white, Color? borderColor}) {
+  Widget _buildButton({
+    required VoidCallback onPressed,
+    required String text,
+    required IconData icon,
+    required Color backgroundColor,
+    Color textColor = Colors.white,
+    Color? borderColor,
+  }) {
     return ElevatedButton.icon(
       onPressed: onPressed,
       icon: Icon(icon, size: 16.0),
       label: Text(text),
-      style: ElevatedButton.styleFrom(foregroundColor: textColor, backgroundColor: backgroundColor, minimumSize: const Size(64, 32), padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8), side: borderColor != null ? BorderSide(color: borderColor) : BorderSide.none), textStyle: const TextStyle(fontSize: 14)),
+      style: ElevatedButton.styleFrom(
+        foregroundColor: textColor,
+        backgroundColor: backgroundColor,
+        minimumSize: const Size(64, 32),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+          side: borderColor != null
+              ? BorderSide(color: borderColor)
+              : BorderSide.none,
+        ),
+        textStyle: const TextStyle(fontSize: 14),
+      ),
     );
   }
 
   Widget _buildCard({required Widget child}) {
     return Container(
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16.0), boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.1), spreadRadius: 2, blurRadius: 8, offset: const Offset(0, 4))]),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16.0),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 2,
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
       padding: const EdgeInsets.all(24.0),
       child: child,
     );
   }
 
   Widget _buildSectionHeader(String title, Color color) {
-    return Row(children: [Container(width: 4, height: 24, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2)), margin: const EdgeInsets.only(right: 12.0)), Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1F2937)))]);
+    return Row(
+      children: [
+        Container(
+          width: 4,
+          height: 24,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(2),
+          ),
+          margin: const EdgeInsets.only(right: 12.0),
+        ),
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF1F2937),
+          ),
+        ),
+      ],
+    );
   }
-  
+
   // --- Main Build Method ---
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<Map<String, dynamic>>( 
+    return StreamBuilder<Map<String, dynamic>>(
       stream: ProfileService.getUserProfileStream(),
       builder: (context, snapshot) {
-        
         if (snapshot.hasData && snapshot.data!.isNotEmpty) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             _updateProfileState(snapshot.data!);
@@ -512,15 +778,33 @@ class _ProfilePageState extends State<ProfilePage> {
 
         final currentProfile = _isEditing ? _editedProfile : _profile;
 
-        if (snapshot.connectionState == ConnectionState.waiting && currentProfile.displayName == 'Loading...') {
+        if (snapshot.connectionState == ConnectionState.waiting &&
+            currentProfile.displayName == 'Loading...') {
           return const Center(child: CircularProgressIndicator());
         }
 
         return Scaffold(
-          backgroundColor: Colors.transparent, 
-          // 🛑 Removed AppBar here; it's handled by HomePage
+          backgroundColor: Colors.transparent,
+          appBar: AppBar(
+            backgroundColor: const Color(0xFF0E141B),
+            elevation: 0,
+            title: Text(
+              currentProfile.displayName,
+              style: const TextStyle(color: Colors.white),
+            ),
+          ),
           body: Container(
-            decoration: const BoxDecoration(gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFFEFF6FF), Color(0xFFFFF7ED), Color(0xFFFFFBEB)])),
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFFEFF6FF),
+                  Color(0xFFFFF7ED),
+                  Color(0xFFFFFBEB),
+                ],
+              ),
+            ),
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(16.0),
               child: Center(
@@ -553,7 +837,8 @@ class _ProfilePageState extends State<ProfilePage> {
 // --- Manage Favorites Dialog (Unchanged) ---
 class ManageFavoritesDialog extends StatefulWidget {
   final List<FavoriteGame> currentFavorites;
-  const ManageFavoritesDialog({Key? key, required this.currentFavorites}) : super(key: key);
+  const ManageFavoritesDialog({Key? key, required this.currentFavorites})
+    : super(key: key);
   @override
   State<ManageFavoritesDialog> createState() => _ManageFavoritesDialogState();
 }
@@ -572,7 +857,12 @@ class _ManageFavoritesDialogState extends State<ManageFavoritesDialog> {
       stream: GameService.getUserCollectionGames(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const AlertDialog(content: SizedBox(height: 100, child: Center(child: CircularProgressIndicator())));
+          return const AlertDialog(
+            content: SizedBox(
+              height: 100,
+              child: Center(child: CircularProgressIndicator()),
+            ),
+          );
         }
         final myGames = snapshot.data ?? [];
 
@@ -596,8 +886,15 @@ class _ManageFavoritesDialogState extends State<ManageFavoritesDialog> {
                         onChanged: (bool? value) {
                           setState(() {
                             if (value == true) {
-                              if (_selectedIds.length < 5) _selectedIds.add(game.id);
-                              else ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Max 5 games allowed"), duration: Duration(milliseconds: 500)));
+                              if (_selectedIds.length < 5)
+                                _selectedIds.add(game.id);
+                              else
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text("Max 5 games allowed"),
+                                    duration: Duration(milliseconds: 500),
+                                  ),
+                                );
                             } else {
                               _selectedIds.remove(game.id);
                             }
@@ -608,17 +905,31 @@ class _ManageFavoritesDialogState extends State<ManageFavoritesDialog> {
                   ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancel"),
+            ),
             ElevatedButton(
               onPressed: () {
                 final List<FavoriteGame> selectedFavorites = myGames
                     .where((game) => _selectedIds.contains(game.id))
-                    .map((game) => FavoriteGame(id: game.id, name: game.name, image: game.thumbnailUrl))
+                    .map(
+                      (game) => FavoriteGame(
+                        id: game.id,
+                        name: game.name,
+                        image: game.thumbnailUrl,
+                      ),
+                    )
                     .toList();
                 Navigator.pop(context, selectedFavorites);
               },
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.deepPurpleAccent),
-              child: const Text("Save Selection", style: TextStyle(color: Colors.white)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.deepPurpleAccent,
+              ),
+              child: const Text(
+                "Save Selection",
+                style: TextStyle(color: Colors.white),
+              ),
             ),
           ],
         );
@@ -633,7 +944,55 @@ class GameCard extends StatelessWidget {
   const GameCard({Key? key, required this.game}) : super(key: key);
   @override
   Widget build(BuildContext context) {
-    return SizedBox(width: 128, child: ClipRRect(borderRadius: BorderRadius.circular(8.0), child: Stack(children: [Image.network(game.image, width: 128, height: 160, fit: BoxFit.cover, errorBuilder: (context, error, stackTrace) => Container(color: Colors.grey[300], width: 128, height: 160, child: const Center(child: Icon(Icons.broken_image)))), Positioned.fill(child: Container(decoration: BoxDecoration(gradient: LinearGradient(colors: [Colors.black.withOpacity(0.7), Colors.black.withOpacity(0.2), Colors.transparent], begin: Alignment.bottomCenter, end: Alignment.topCenter)), alignment: Alignment.bottomLeft, padding: const EdgeInsets.all(8.0), child: Text(game.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500))))])));
+    return SizedBox(
+      width: 128,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8.0),
+        child: Stack(
+          children: [
+            Image.network(
+              game.image,
+              width: 128,
+              height: 160,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) => Container(
+                color: Colors.grey[300],
+                width: 128,
+                height: 160,
+                child: const Center(child: Icon(Icons.broken_image)),
+              ),
+            ),
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.black.withOpacity(0.7),
+                      Colors.black.withOpacity(0.2),
+                      Colors.transparent,
+                    ],
+                    begin: Alignment.bottomCenter,
+                    end: Alignment.topCenter,
+                  ),
+                ),
+                alignment: Alignment.bottomLeft,
+                padding: const EdgeInsets.all(8.0),
+                child: Text(
+                  game.name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -658,7 +1017,8 @@ class AvatarSelectionDialog extends StatelessWidget {
           itemBuilder: (context, index) {
             final url = AVATAR_URLS[index];
             return GestureDetector(
-              onTap: () => Navigator.pop(context, url), // Return the selected URL
+              onTap: () =>
+                  Navigator.pop(context, url), // Return the selected URL
               child: CircleAvatar(
                 radius: 40,
                 backgroundColor: Colors.grey[200],
@@ -670,7 +1030,8 @@ class AvatarSelectionDialog extends StatelessWidget {
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.pop(context, null), // Return null if cancelled
+          onPressed: () =>
+              Navigator.pop(context, null), // Return null if cancelled
           child: const Text("Cancel"),
         ),
       ],
