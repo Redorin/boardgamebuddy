@@ -1,4 +1,4 @@
-// lib/pages/player_finder.dart (FINAL: FIXES MISSING CHIP HELPER AND TABS)
+// lib/pages/player_finder.dart (FINAL: FIXES WIDGET LIFECYCLE CRASH)
 import 'package:cloud_firestore/cloud_firestore.dart'; 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -87,7 +87,6 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
     return PlayerDisplay(id: doc.id, displayName: displayName, profileImage: profileImage, preferredGenres: genres, distance: distance, isOnline: isOnline, gamesOwned: gamesCount, lastActiveTimestamp: lastActive);
   }
 
-  // 💡 FIX: ADD MISSING HELPER METHOD
   Widget _buildFilterChip({required String label, required bool isSelected, required VoidCallback onTap}) {
     return ActionChip(
       label: Text(label, style: TextStyle(color: isSelected ? Colors.white : const Color(0xFFC0C0C0))),
@@ -98,7 +97,6 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
     );
   }
 
-  // 💡 NEW: FRIEND LIST WIDGET
   Widget _buildFriendsList() {
     return StreamBuilder<List<Map<String, dynamic>>>(
       stream: ProfileService.getFriendsStream(),
@@ -131,7 +129,6 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
     );
   }
   
-  // 💡 NEW: FRIEND REQUESTS WIDGET
   Widget _buildRequestsList() {
     return StreamBuilder<List<Map<String, dynamic>>>(
       stream: ProfileService.getIncomingRequestsStream(),
@@ -164,6 +161,7 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
                       icon: const Icon(Icons.check, color: Colors.green),
                       onPressed: () async {
                         await ProfileService.acceptFriendRequest(senderId, senderName, senderImage);
+                        // 🛑 FIX: The crash is here. The mounted check is the safest defense.
                         if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("$senderName is now your friend!")));
                       },
                     ),
@@ -171,6 +169,7 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
                       icon: const Icon(Icons.close, color: Colors.red),
                       onPressed: () async {
                         await ProfileService.removeFriend(senderId); 
+                        // 🛑 FIX: The crash is here.
                         if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Request from $senderName declined.")));
                       },
                     ),
