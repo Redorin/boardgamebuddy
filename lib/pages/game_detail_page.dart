@@ -9,7 +9,6 @@ class GameDetailPage extends StatelessWidget {
   final BoardGame game;
   const GameDetailPage({required this.game, super.key});
 
-  // Helper method for the status cards
   Widget _buildStatCard(IconData icon, String label, String value, Color color) {
     return Container(
       padding: const EdgeInsets.all(12),
@@ -41,7 +40,6 @@ class GameDetailPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Game Cover Image
             ClipRRect(
               borderRadius: BorderRadius.circular(20),
               child: Image.network(
@@ -49,17 +47,18 @@ class GameDetailPage extends StatelessWidget {
                 height: 250,
                 width: double.infinity,
                 fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => Container(
+                  height: 250,
+                  color: Colors.grey[200],
+                  child: const Center(child: Icon(Icons.broken_image, color: Colors.grey)),
+                ),
               ),
             ),
             const SizedBox(height: 24),
-
-            // Title and Description
             Text(game.name, style: GoogleFonts.poppins(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.black87)),
             const SizedBox(height: 8),
             Text(game.description, style: GoogleFonts.poppins(fontSize: 16, color: Colors.black54, height: 1.5)),
             const SizedBox(height: 24),
-
-            // Stats Grid
             GridView.count(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
@@ -75,25 +74,19 @@ class GameDetailPage extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 32),
-
-            // Dynamic Add/Remove Button
             StreamBuilder<bool>(
               stream: GameService.isGameOwned(game.id),
               builder: (context, snapshot) {
                 final isOwned = snapshot.data ?? false;
-                
                 return ElevatedButton.icon(
                   onPressed: () async {
                     if (isOwned) {
-                      // REMOVE
                       await GameService.removeGameById(game.id);
                       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("${game.name} removed from collection!"), backgroundColor: Colors.redAccent));
                     } else {
-                      // ADD
                       await GameService.addGamesByIds([game.id]);
                       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("${game.name} added to collection!"), backgroundColor: Colors.green));
                     }
-                    // After action, navigate back
                     if (context.mounted) Navigator.pop(context); 
                   },
                   icon: Icon(isOwned ? Icons.remove_circle : Icons.add_circle, color: Colors.white),
@@ -104,7 +97,7 @@ class GameDetailPage extends StatelessWidget {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: isOwned ? const Color(0xFFDC2626) : Colors.deepPurple,
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    minimumSize: const Size(double.infinity, 50), // Full width
+                    minimumSize: const Size(double.infinity, 50),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   ),
                 );
