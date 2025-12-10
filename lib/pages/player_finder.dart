@@ -1,9 +1,10 @@
-// lib/pages/player_finder.dart (FINAL: FIXES WIDGET LIFECYCLE CRASH)
+// lib/pages/player_finder.dart (UPDATED with FINAL SHIMMER SKELETON UI)
 import 'package:cloud_firestore/cloud_firestore.dart'; 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:lucide_icons/lucide_icons.dart'; 
+import 'package:shimmer/shimmer.dart'; // 💡 PACKAGE MUST BE INSTALLED
 import '../services/profile_service.dart';
 import 'read_only_profile_page.dart';
 
@@ -87,6 +88,32 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
     return PlayerDisplay(id: doc.id, displayName: displayName, profileImage: profileImage, preferredGenres: genres, distance: distance, isOnline: isOnline, gamesOwned: gamesCount, lastActiveTimestamp: lastActive);
   }
 
+  // 💡 NEW: Skeleton Tile Widget (The core modern UI element)
+  Widget _buildSkeletonTile() {
+    return Shimmer.fromColors(
+      baseColor: const Color(0xFF171A21), // Dark gray/blue base
+      highlightColor: const Color(0xFF2A3F5F), // Lighter shimmer color
+      child: Card(
+        margin: const EdgeInsets.only(bottom: 10),
+        color: Colors.white.withOpacity(0.05),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: ListTile(
+          leading: const CircleAvatar(radius: 24, backgroundColor: Colors.black), // Skeleton Avatar
+          title: Container(height: 10, width: 150, decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(5))), // Skeleton Title
+          subtitle: Container(height: 8, width: 100, decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(5))), // Skeleton Subtitle
+        ),
+      ),
+    );
+  }
+
+  // 💡 NEW: Skeleton List Builder
+  Widget _buildSkeletonList() {
+    return ListView.builder(
+      itemCount: 6, // Show 6 placeholder tiles
+      itemBuilder: (context, index) => _buildSkeletonTile(),
+    );
+  }
+
   Widget _buildFilterChip({required String label, required bool isSelected, required VoidCallback onTap}) {
     return ActionChip(
       label: Text(label, style: TextStyle(color: isSelected ? Colors.white : const Color(0xFFC0C0C0))),
@@ -97,11 +124,13 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
     );
   }
 
+  // 💡 MODIFIED: _buildFriendsList (Uses Skeleton)
   Widget _buildFriendsList() {
     return StreamBuilder<List<Map<String, dynamic>>>(
       stream: ProfileService.getFriendsStream(),
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+        // 🛑 SHOW SKELETON WHILE WAITING
+        if (snapshot.connectionState == ConnectionState.waiting) return _buildSkeletonList();
         
         final friends = snapshot.data ?? [];
         if (friends.isEmpty) return const Center(child: Text("You haven't added any friends yet.", style: TextStyle(color: Colors.white54)));
@@ -129,11 +158,13 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
     );
   }
   
+  // 💡 MODIFIED: _buildRequestsList (Uses Skeleton)
   Widget _buildRequestsList() {
     return StreamBuilder<List<Map<String, dynamic>>>(
       stream: ProfileService.getIncomingRequestsStream(),
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+        // 🛑 SHOW SKELETON WHILE WAITING
+        if (snapshot.connectionState == ConnectionState.waiting) return _buildSkeletonList();
         
         final requests = snapshot.data ?? [];
         if (requests.isEmpty) return const Center(child: Text("No incoming friend requests.", style: TextStyle(color: Colors.white54)));
@@ -161,7 +192,6 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
                       icon: const Icon(Icons.check, color: Colors.green),
                       onPressed: () async {
                         await ProfileService.acceptFriendRequest(senderId, senderName, senderImage);
-                        // 🛑 FIX: The crash is here. The mounted check is the safest defense.
                         if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("$senderName is now your friend!")));
                       },
                     ),
@@ -169,7 +199,6 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
                       icon: const Icon(Icons.close, color: Colors.red),
                       onPressed: () async {
                         await ProfileService.removeFriend(senderId); 
-                        // 🛑 FIX: The crash is here.
                         if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Request from $senderName declined.")));
                       },
                     ),
@@ -192,7 +221,7 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
             controller: _searchController,
             style: const TextStyle(color: Colors.white),
             decoration: InputDecoration(
-              hintText: 'Search players or genres...',
+              hintText: 'Search players...',
               hintStyle: const TextStyle(color: Colors.white54),
               prefixIcon: const Icon(Icons.search, color: Colors.white54),
               filled: true,
@@ -212,8 +241,10 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
             child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance.collection('users').snapshots(),
               builder: (context, snapshot) {
-                if (snapshot.hasError) return Center(child: Text('Error: ${snapshot.error}', style: const TextStyle(color: Colors.red)));
-                if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+                // 🛑 CHANGE: Show skeleton while waiting
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return _buildSkeletonList();
+                }
 
                 var players = snapshot.data!.docs
                     .map(_mapDocumentToPlayer)
@@ -293,5 +324,6 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
         trailing: const Icon(Icons.chevron_right, color: Colors.white54),
       ),
     );
+ 
   }
 }

@@ -1,11 +1,11 @@
-// lib/pages/profile_page.dart (FINAL, CLEANED, AND WORKING)
+// lib/pages/profile_page.dart (FINAL, UPDATED FOR USERNAME SYNC)
 import 'package:flutter/material.dart';
 import '../utils/avatar_urls.dart'; // Retained for AVATAR_URLS constant
 import '../services/profile_service.dart'; 
 import '../services/game_service.dart'; 
 import '../models/board_game.dart'; 
 
-// --- Data Models ---
+// --- Data Models (Ensure these match your file's structure) ---
 
 class FavoriteGame {
   final String id;
@@ -71,8 +71,14 @@ class UserProfile {
 
 class ProfilePage extends StatefulWidget {
   final VoidCallback onLogout;
+  // 💡 ADDED: Function to send the display name up to the HomePage AppBar
+  final Function(String) onDisplayNameUpdate; 
 
-  const ProfilePage({Key? key, required this.onLogout}) : super(key: key);
+  const ProfilePage({
+    Key? key, 
+    required this.onLogout,
+    required this.onDisplayNameUpdate, // 💡 REQUIRED
+  }) : super(key: key);
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
@@ -163,6 +169,9 @@ class _ProfilePageState extends State<ProfilePage> {
       favoriteGames: favoriteGamesMapList, 
     );
     
+    // 💡 SYNCHRONIZE HOMEPAGE AFTER SAVE
+    widget.onDisplayNameUpdate(newProfile.displayName);
+
     setState(() {
       _profile = newProfile;
       _isEditing = false;
@@ -204,7 +213,6 @@ class _ProfilePageState extends State<ProfilePage> {
     if (data.isNotEmpty) {
       final List<String> genres = (data['preferredGenres'] as List?)?.map((e) => e.toString()).toList() ?? [];
       
-      // 💡 QUOTA FIX: Get ownedGamesCount directly from the streamed document data
       final int realGameCount = (data['ownedGamesCount'] as num?)?.toInt() ?? 0;
       
       List<FavoriteGame> fetchedFavorites = [];
@@ -214,13 +222,18 @@ class _ProfilePageState extends State<ProfilePage> {
         }).toList();
       }
       
-      // Determine the image URL to load/set as the default:
       String savedImageUrl = data['profileImage'] as String? ?? AVATAR_URLS.first; 
+      String newDisplayName = data['displayName'] as String? ?? _profile.displayName;
       
+      // 💡 CALL CALLBACK ON LOAD: Pass the name up to HomePage for the initial load/stream update
+      if (newDisplayName != _profile.displayName) {
+          widget.onDisplayNameUpdate(newDisplayName);
+      }
+
       if (!_isEditing) {
         setState(() {
           _profile = _profile.copyWith(
-            displayName: data['displayName'] as String? ?? _profile.displayName,
+            displayName: newDisplayName,
             profileImage: savedImageUrl, 
             aboutMe: data['aboutMe'] as String? ?? _profile.aboutMe,
             preferredGenres: genres,
@@ -270,16 +283,10 @@ class _ProfilePageState extends State<ProfilePage> {
   
   // --- UI Builder Methods ---
 
-  // 1. Build Header Card (Combines logic from all previous attempts)
   Widget _buildHeaderCard(UserProfile currentProfile) {
-    // Displays the current URL being edited or the saved one.
     final String imageUrlToDisplay = currentProfile.profileImage.isNotEmpty 
         ? currentProfile.profileImage 
         : AVATAR_URLS.first; 
-
-    final String initials = currentProfile.displayName.isNotEmpty
-      ? currentProfile.displayName.substring(0, 1).toUpperCase()
-      : '?';
 
     return _buildCard(
       child: Stack(
@@ -305,33 +312,30 @@ class _ProfilePageState extends State<ProfilePage> {
               child: Column(
                 children: [
                   GestureDetector(
-  onTap: _isEditing ? _showAvatarSelectionDialog : null, // Opens selection dialog
-  child: Stack(
-    alignment: Alignment.center,
-    children: [
-      Container(
-        width: 136, height: 136,
-        decoration: BoxDecoration(shape: BoxShape.circle, gradient: const LinearGradient(colors: [Color(0xFF3B82F6), Color(0xFFF97316)], begin: Alignment.topLeft, end: Alignment.bottomRight), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 10, offset: const Offset(0, 4))]),
-        padding: const EdgeInsets.all(4),
-        child: CircleAvatar(
-          // 💡 FIX: Set background color to match the gradient/theme while loading
-          backgroundColor: Colors.deepPurpleAccent.shade100, 
-          radius: 64,
-          backgroundImage: NetworkImage(imageUrlToDisplay), // Displays the selected image
-          
-          // ❌ FIX: Remove the text initial placeholder.
-          child: null,
-        ),
-      ),
-      if (_isEditing)
-        Container(
-          width: 136, height: 136,
-          decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.black.withOpacity(0.4)),
-          child: const Icon(Icons.palette, color: Colors.white, size: 40),
-        ),
-    ],
-  ),
-),
+                    onTap: _isEditing ? _showAvatarSelectionDialog : null, // Opens selection dialog
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Container(
+                          width: 136, height: 136,
+                          decoration: BoxDecoration(shape: BoxShape.circle, gradient: const LinearGradient(colors: [Color(0xFF3B82F6), Color(0xFFF97316)], begin: Alignment.topLeft, end: Alignment.bottomRight), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 10, offset: const Offset(0, 4))]),
+                          padding: const EdgeInsets.all(4),
+                          child: CircleAvatar(
+                            backgroundColor: Colors.deepPurpleAccent.shade100, 
+                            radius: 64,
+                            backgroundImage: NetworkImage(imageUrlToDisplay), 
+                            child: null,
+                          ),
+                        ),
+                        if (_isEditing)
+                          Container(
+                            width: 136, height: 136,
+                            decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.black.withOpacity(0.4)),
+                            child: const Icon(Icons.palette, color: Colors.white, size: 40),
+                          ),
+                      ],
+                    ),
+                  ),
                   const SizedBox(height: 16),
                   _isEditing 
                     ? SizedBox(width: 250, child: TextField(controller: _displayNameController, textAlign: TextAlign.center, decoration: const InputDecoration(isDense: true, contentPadding: EdgeInsets.symmetric(vertical: 8, horizontal: 10), border: OutlineInputBorder()), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold))) 
@@ -345,7 +349,6 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  // 2. Build About Me Card
   Widget _buildAboutMeCard(UserProfile currentProfile) {
     return _buildCard(
       child: Column(
@@ -361,7 +364,6 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  // 3. Build Genres Card
   Widget _buildGenresCard(UserProfile currentProfile) {
     return _buildCard(
       child: Column(
@@ -400,7 +402,6 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  // 4. Build Collection Card
   Widget _buildCollectionCard(UserProfile currentProfile) {
     return _buildCard(
       child: Column(
@@ -446,7 +447,6 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  // 5. Build Logout Button
   Widget _buildLogoutButton() {
     return Container(
       height: 56,
@@ -497,7 +497,7 @@ class _ProfilePageState extends State<ProfilePage> {
     return Row(children: [Container(width: 4, height: 24, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2)), margin: const EdgeInsets.only(right: 12.0)), Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1F2937)))]);
   }
   
-  // --- Main Build Method (Unchanged) ---
+  // --- Main Build Method ---
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<Map<String, dynamic>>( 
@@ -505,7 +505,6 @@ class _ProfilePageState extends State<ProfilePage> {
       builder: (context, snapshot) {
         
         if (snapshot.hasData && snapshot.data!.isNotEmpty) {
-          // Use addPostFrameCallback to safely call setState after build completes
           WidgetsBinding.instance.addPostFrameCallback((_) {
             _updateProfileState(snapshot.data!);
           });
@@ -519,7 +518,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
         return Scaffold(
           backgroundColor: Colors.transparent, 
-          appBar: AppBar(title: const Text('Profile'), backgroundColor: Colors.transparent, elevation: 0, toolbarHeight: 0),
+          // 🛑 Removed AppBar here; it's handled by HomePage
           body: Container(
             decoration: const BoxDecoration(gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFFEFF6FF), Color(0xFFFFF7ED), Color(0xFFFFFBEB)])),
             child: SingleChildScrollView(
@@ -555,14 +554,12 @@ class _ProfilePageState extends State<ProfilePage> {
 class ManageFavoritesDialog extends StatefulWidget {
   final List<FavoriteGame> currentFavorites;
   const ManageFavoritesDialog({Key? key, required this.currentFavorites}) : super(key: key);
-
   @override
   State<ManageFavoritesDialog> createState() => _ManageFavoritesDialogState();
 }
 
 class _ManageFavoritesDialogState extends State<ManageFavoritesDialog> {
   Set<String> _selectedIds = {};
-
   @override
   void initState() {
     super.initState();
@@ -640,7 +637,7 @@ class GameCard extends StatelessWidget {
   }
 }
 
-// --- Avatar Selection Dialog (New) ---
+// --- Avatar Selection Dialog (Unchanged) ---
 class AvatarSelectionDialog extends StatelessWidget {
   const AvatarSelectionDialog({super.key});
 

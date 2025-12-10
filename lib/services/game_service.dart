@@ -1,8 +1,12 @@
-// lib/services/game_service.dart (UPDATED with Data Caching Optimization)
+// lib/services/game_service.dart (FINAL: FIXES FAVORITE GAME SYNC)
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart'; 
 import 'dart:async'; 
 import '../models/board_game.dart'; 
+
+// NOTE: We assume FavoriteGame model is imported/available via profile_page.dart for correct type usage
+// Since the models are defined in profile_page.dart, we must rely on them being globally available 
+// or redefine them, but let's assume the necessary models are available via imports in practice.
 
 class GameService {
   static final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -17,7 +21,7 @@ class GameService {
     return _db.collection('users').doc(userId); 
   }
 
-  // 1. ADD GAMES BY ID (UPDATED to fetch and cache full game data)
+  // 1. ADD GAMES BY ID (Remains the same)
   static Future<void> addGamesByIds(List<String> gameIds) async { 
     final userDocRef = _getUserDocRef();
     if (userDocRef == null) return;
@@ -25,7 +29,6 @@ class GameService {
     final collectionRef = userDocRef.collection('collection'); 
     final batch = _db.batch();
 
-    // 💡 OPTIMIZATION STEP 1: Fetch the full game data from the global '/games' collection ONCE.
     final List<Future<DocumentSnapshot<Map<String, dynamic>>>> futures = gameIds
         .map((id) => _db.collection('games').doc(id).get())
         .toList();
@@ -39,8 +42,6 @@ class GameService {
         final gameData = BoardGame.fromFirestore(snap.data()!); 
         final docRef = collectionRef.doc(gameData.id);
         
-        // 💡 OPTIMIZATION STEP 2: Write the full, rich game data map into the subcollection.
-        // This makes future reads of the collection cheap (1 read per game instead of 2).
         batch.set(docRef, gameData.toFirestore()..['added_at'] = FieldValue.serverTimestamp(),
           SetOptions(merge: true));
         
@@ -61,43 +62,54 @@ class GameService {
     }
   }
 
-  // 1.5. REMOVE GAME BY ID (Remains the same)
+  // 1.5. REMOVE GAME BY ID (FIXED: Updates favoriteGames list)
   static Future<void> removeGameById(String gameId) async {
     final userDocRef = _getUserDocRef();
     if (userDocRef == null) return;
     
+    // 1. Fetch the user document to get the current favoriteGames array
+    final userSnapshot = await userDocRef.get();
+    final userData = userSnapshot.data() as Map<String, dynamic>? ?? {};
+    
+    // Attempt to cast the stored list to the correct format (List<Map<String, dynamic>>)
+    final currentFavorites = (userData['favoriteGames'] as List?)
+        ?.map((item) => item as Map<String, dynamic>)
+        .toList() ?? [];
+
+    // 2. Filter the list to remove the game being deleted
+    final newFavorites = currentFavorites.where((game) => game['id'] != gameId).toList();
+    
     final batch = _db.batch();
     
-    // 1. Delete the game document from the subcollection
+    // 3. Delete the game document from the subcollection
     batch.delete(userDocRef.collection('collection').doc(gameId));
     
-    // 2. Decrement the ownedGamesCount field on the main user document
+    // 4. Decrement the ownedGamesCount field AND update the favoriteGames list
     batch.update(userDocRef, {
-      'ownedGamesCount': FieldValue.increment(-1.0)
+      'ownedGamesCount': FieldValue.increment(-1.0),
+      // 💡 NEW: Write the filtered list back to the profile document
+      'favoriteGames': newFavorites, 
     });
     
     try {
       await batch.commit();
-      print('Game ID $gameId removed from collection for UID: $currentUserId.');
+      print('Game ID $gameId removed from collection and favorites for UID: $currentUserId.');
     } catch (e) {
       print('Error removing game from collection: $e');
     }
   }
 
-  // 2. GET USER'S GAMES (OPTIMIZED - Reads directly from cached subcollection data)
+  // 2. GET USER'S GAMES (Remains the same)
   static Stream<List<BoardGame>> getUserCollectionGames() {
     final userDocRef = _getUserDocRef();
     if (userDocRef == null) return Stream.value([]);
     
-    // 💡 OPTIMIZATION: Now just reads the subcollection once and maps the data.
-    // This is a single stream read for all games in the collection.
     return userDocRef.collection('collection')
         .orderBy('added_at', descending: true)
         .snapshots() 
-        .map((collectionSnapshot) { // Changed from asyncMap to map
+        .map((collectionSnapshot) { 
           
           return collectionSnapshot.docs
-              // Maps the document data directly, as the full game object is now cached here.
               .map((doc) => BoardGame.fromFirestore(doc.data()))
               .toList();
         });
@@ -126,5 +138,17 @@ class GameService {
         print("Error checking game ownership: $e");
         return false;
     });
+  }
+
+  // 5. GET USER'S COLLECTION IDs (Remains the same)
+  static Stream<Set<String>> getUserCollectionIds() {
+    final userDocRef = _getUserDocRef();
+    if (userDocRef == null) return Stream.value({});
+    
+    return userDocRef.collection('collection')
+        .snapshots() 
+        .map((snapshot) {
+          return snapshot.docs.map((doc) => doc.id).toSet();
+        });
   }
 }

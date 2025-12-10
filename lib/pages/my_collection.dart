@@ -1,11 +1,12 @@
-// lib/pages/my_collection.dart
+// lib/pages/my_collection.dart (UPDATED with Shimmer Skeletons)
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:shimmer/shimmer.dart'; // 💡 NEW: For skeleton loading
 import '../services/game_service.dart';
 import '../models/board_game.dart'; 
 import 'catalog_page.dart';
-import 'game_detail_page.dart'; // 💡 Uses the Full Page
+import 'game_detail_page.dart';
 
 enum CollectionViewMode { grid, list } 
 
@@ -20,6 +21,10 @@ class _MyCollectionPageState extends State<MyCollectionPage> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   CollectionViewMode _viewMode = CollectionViewMode.grid; 
+  
+  // Define Shimmer Colors for dark theme consistency
+  static const Color _shimmerBaseColor = Color(0xFF171A21); 
+  static const Color _shimmerHighlightColor = Color(0xFF2A3F5F);
 
   @override
   void initState() {
@@ -46,6 +51,81 @@ class _MyCollectionPageState extends State<MyCollectionPage> {
     _searchController.removeListener(_updateSearchQuery);
     _searchController.dispose();
     super.dispose();
+  }
+  
+  // 💡 NEW: Skeleton Tile for Grid View
+  Widget _buildSkeletonGridCard() {
+    return Container(
+      decoration: BoxDecoration(color: _shimmerBaseColor, borderRadius: BorderRadius.circular(8)),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Column(
+          children: [
+            Expanded(child: Container(color: _shimmerHighlightColor)), // Placeholder image area
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(height: 14, width: double.infinity, color: _shimmerHighlightColor), // Placeholder Title
+                  const SizedBox(height: 8),
+                  Container(height: 10, width: 80, color: _shimmerHighlightColor), // Placeholder Info
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  // 💡 NEW: Skeleton Tile for List View
+  Widget _buildSkeletonListTile() {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 10), 
+      color: _shimmerBaseColor, 
+      elevation: 0, 
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+        leading: ClipRRect(borderRadius: BorderRadius.circular(8), child: Container(width: 60, height: 60, color: _shimmerHighlightColor)),
+        title: Container(height: 14, width: 150, color: _shimmerHighlightColor),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 8.0),
+          child: Container(height: 10, width: 100, color: _shimmerHighlightColor),
+        ),
+      ),
+    );
+  }
+
+  // 💡 NEW: Shimmer Wrapper View
+  Widget _buildSkeletonView() {
+    return Shimmer.fromColors(
+      baseColor: _shimmerBaseColor,
+      highlightColor: _shimmerHighlightColor,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(height: 14, width: 150, color: _shimmerHighlightColor), // Placeholder for "X games in collection"
+            const SizedBox(height: 12),
+            Expanded(
+              child: _viewMode == CollectionViewMode.grid
+                  ? GridView.builder(
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, mainAxisSpacing: 16, crossAxisSpacing: 16, childAspectRatio: 2 / 3),
+                      itemCount: 6,
+                      itemBuilder: (_, i) => _buildSkeletonGridCard(),
+                    )
+                  : ListView.builder(
+                      itemCount: 6,
+                      itemBuilder: (_, i) => _buildSkeletonListTile(),
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildCollectionsHeader(BuildContext context) {
@@ -147,7 +227,9 @@ class _MyCollectionPageState extends State<MyCollectionPage> {
     return StreamBuilder<List<BoardGame>>(
       stream: GameService.getUserCollectionGames(),
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+        // 🛑 NEW: Show the skeleton view while loading
+        if (snapshot.connectionState == ConnectionState.waiting) return _buildSkeletonView();
+        
         if (snapshot.hasError) return Center(child: Text('Error: ${snapshot.error}', style: GoogleFonts.poppins(color: Colors.red)));
 
         final games = snapshot.data ?? [];
@@ -177,8 +259,6 @@ class _MyCollectionPageState extends State<MyCollectionPage> {
                         itemBuilder: (_, i) => _buildGameCard(filteredGames[i]),
                       )
                     : ListView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
                         itemCount: filteredGames.length,
                         itemBuilder: (_, i) => _buildGameListTile(filteredGames[i]),
                       ),
@@ -193,7 +273,6 @@ class _MyCollectionPageState extends State<MyCollectionPage> {
   Widget _buildGameCard(BoardGame game) {
     return InkWell(
       onTap: () {
-        // 💡 NEW: Navigate to the FULL PAGE
         Navigator.push(context, MaterialPageRoute(builder: (_) => GameDetailPage(game: game)));
       },
       child: Container(
@@ -215,7 +294,6 @@ class _MyCollectionPageState extends State<MyCollectionPage> {
   Widget _buildGameListTile(BoardGame game) {
     return InkWell(
       onTap: () {
-        // 💡 NEW: Navigate to the FULL PAGE
         Navigator.push(context, MaterialPageRoute(builder: (_) => GameDetailPage(game: game)));
       },
       child: Card(
