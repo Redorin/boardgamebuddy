@@ -1,7 +1,8 @@
-// lib/pages/home_page.dart (REVERTED TO PRE-DETAIL PAGE STATE)
+// lib/pages/home_page.dart (MODERN COLOR SCHEME)
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import '../config/app_theme.dart';
 import '../services/game_service.dart';
 import '../services/auth_service.dart';
 import '../services/profile_service.dart';
@@ -70,7 +71,7 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xff0E141B),
+      backgroundColor: AppColors.darkBg,
       appBar: _getAppBar(),
       body: _getPage(),
       bottomNavigationBar: SafeArea(
@@ -79,7 +80,7 @@ class _HomePageState extends State<HomePage> {
           padding: const EdgeInsets.all(12.0), // keep 10-15px from screen edges
           child: Container(
             decoration: BoxDecoration(
-              color: const Color(0xff171A21),
+              color: AppColors.darkBgSecondary,
               borderRadius: BorderRadius.circular(14),
               boxShadow: [
                 BoxShadow(
@@ -94,8 +95,8 @@ class _HomePageState extends State<HomePage> {
               child: BottomNavigationBar(
                 backgroundColor: Colors.transparent,
                 elevation: 0,
-                selectedItemColor: Colors.deepPurpleAccent,
-                unselectedItemColor: Colors.white54,
+                selectedItemColor: AppColors.primary,
+                unselectedItemColor: AppColors.textTertiary,
                 currentIndex: _selectedIndex,
                 onTap: _onItemTapped,
                 type: BottomNavigationBarType.fixed,
@@ -220,14 +221,14 @@ class _DiscoverPageState extends State<DiscoverPage> {
                     style: GoogleFonts.poppins(
                       fontSize: 32,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: AppColors.textPrimary,
                     ),
                   ),
                   Text(
                     "Discover new worlds",
                     style: GoogleFonts.poppins(
                       fontSize: 16,
-                      color: Colors.grey,
+                      color: AppColors.textTertiary,
                     ),
                   ),
                 ],
@@ -284,9 +285,9 @@ class _DiscoverPageState extends State<DiscoverPage> {
               top: 0,
               bottom: 120,
               child: IconButton(
-                icon: const Icon(
+                icon: Icon(
                   Icons.arrow_back_ios,
-                  color: Colors.white,
+                  color: AppColors.textPrimary,
                   size: 30,
                 ),
                 onPressed: _goToPreviousPage,
@@ -300,9 +301,9 @@ class _DiscoverPageState extends State<DiscoverPage> {
               top: 0,
               bottom: 120,
               child: IconButton(
-                icon: const Icon(
+                icon: Icon(
                   Icons.arrow_forward_ios,
-                  color: Colors.white,
+                  color: AppColors.textPrimary,
                   size: 30,
                 ),
                 onPressed: _goToNextPage,
@@ -311,14 +312,14 @@ class _DiscoverPageState extends State<DiscoverPage> {
             ),
 
             // Hint Text
-            const Positioned(
+            Positioned(
               bottom: 40,
               left: 0,
               right: 0,
               child: Center(
                 child: Text(
                   "Swipe or Click arrows to explore",
-                  style: TextStyle(color: Colors.white30, fontSize: 12),
+                  style: TextStyle(color: AppColors.textTertiary, fontSize: 12),
                 ),
               ),
             ),
@@ -362,8 +363,11 @@ class _DiscoverPageState extends State<DiscoverPage> {
                     : game.thumbnailUrl,
                 fit: BoxFit.cover,
                 errorBuilder: (c, o, s) => Container(
-                  color: Colors.grey[900],
-                  child: const Icon(Icons.broken_image, color: Colors.white),
+                  color: AppColors.surface,
+                  child: Icon(
+                    Icons.broken_image,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
               ),
               Container(
@@ -386,7 +390,7 @@ class _DiscoverPageState extends State<DiscoverPage> {
                     Text(
                       game.name,
                       style: GoogleFonts.poppins(
-                        color: Colors.white,
+                        color: AppColors.textPrimary,
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
                       ),
@@ -418,9 +422,12 @@ class _DiscoverPageState extends State<DiscoverPage> {
       ),
       child: Row(
         children: [
-          Icon(icon, color: Colors.white, size: 12),
+          Icon(icon, color: AppColors.textPrimary, size: 12),
           const SizedBox(width: 4),
-          Text(text, style: const TextStyle(color: Colors.white, fontSize: 10)),
+          Text(
+            text,
+            style: TextStyle(color: AppColors.textPrimary, fontSize: 10),
+          ),
         ],
       ),
     );

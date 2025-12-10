@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../config/app_theme.dart';
 import '../../models/board_game.dart';
 
 class GameCatalogCard extends StatelessWidget {
@@ -15,15 +16,15 @@ class GameCatalogCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xff1E1E1E),
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
         border: isSelected
-            ? Border.all(color: Colors.deepPurpleAccent, width: 3)
-            : null,
+            ? Border.all(color: AppColors.primary, width: 3)
+            : Border.all(color: AppColors.primary.withOpacity(0.2), width: 1),
         boxShadow: [
           BoxShadow(
             color: isSelected
-                ? Colors.deepPurpleAccent.withOpacity(0.3)
+                ? AppColors.primary.withOpacity(0.3)
                 : Colors.black.withOpacity(0.2),
             blurRadius: isSelected ? 12 : 5,
             offset: const Offset(0, 4),
@@ -49,20 +50,23 @@ class GameCatalogCard extends StatelessWidget {
                   errorBuilder: (context, error, stackTrace) => Container(
                     height: 120,
                     width: double.infinity,
-                    color: Colors.grey,
-                    child: const Center(
-                      child: Icon(Icons.category, color: Colors.white70),
+                    color: AppColors.surface,
+                    child: Center(
+                      child: Icon(
+                        Icons.category,
+                        color: AppColors.textSecondary,
+                      ),
                     ),
                   ),
                 ),
               ),
               if (isSelected)
-                const Positioned(
+                Positioned(
                   top: 8,
                   right: 8,
                   child: Icon(
                     Icons.check_circle,
-                    color: Colors.deepPurpleAccent,
+                    color: AppColors.primary,
                     size: 28,
                   ),
                 ),
@@ -78,8 +82,8 @@ class GameCatalogCard extends StatelessWidget {
                   game.name,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
                   ),
@@ -87,7 +91,7 @@ class GameCatalogCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   game.category,
-                  style: const TextStyle(color: Colors.grey, fontSize: 12),
+                  style: TextStyle(color: AppColors.textTertiary, fontSize: 12),
                 ),
                 const SizedBox(height: 8),
                 Row(
@@ -95,15 +99,15 @@ class GameCatalogCard extends StatelessWidget {
                   children: [
                     Text(
                       '${game.minPlayers}-${game.maxPlayers} players',
-                      style: const TextStyle(
-                        color: Colors.white70,
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
                         fontSize: 12,
                       ),
                     ),
                     Text(
                       '${game.playerTime} min',
-                      style: const TextStyle(
-                        color: Colors.white70,
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
                         fontSize: 12,
                       ),
                     ),

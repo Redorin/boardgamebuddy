@@ -1,5 +1,6 @@
-// lib/pages/signup_page.dart
+// lib/pages/signup_page.dart (MODERN COLOR SCHEME)
 import 'package:flutter/material.dart';
+import '../config/app_theme.dart';
 import '../services/auth_service.dart';
 import 'login_page.dart';
 import 'onboarding_page.dart';
@@ -12,16 +13,16 @@ class SignupPage extends StatefulWidget {
 }
 
 class _SignupPageState extends State<SignupPage> {
-  final emailCtrl = TextEditingController(); 
+  final emailCtrl = TextEditingController();
   final passwordCtrl = TextEditingController();
   final confirmPasswordCtrl = TextEditingController();
-  
+
   String error = "";
   bool isLoading = false;
 
   @override
   void dispose() {
-    emailCtrl.dispose(); 
+    emailCtrl.dispose();
     passwordCtrl.dispose();
     confirmPasswordCtrl.dispose();
     super.dispose();
@@ -35,11 +36,11 @@ class _SignupPageState extends State<SignupPage> {
 
     // 1. Client-side Validation
     if (passwordCtrl.text != confirmPasswordCtrl.text) {
-        setState(() {
-          error = "Passwords do not match!";
-          isLoading = false;
-        });
-        return;
+      setState(() {
+        error = "Passwords do not match!";
+        isLoading = false;
+      });
+      return;
     }
 
     if (passwordCtrl.text.length < 6) {
@@ -51,25 +52,20 @@ class _SignupPageState extends State<SignupPage> {
     }
 
     // 2. Server-side Registration (Using Firebase via AuthService)
-    bool ok = await AuthService.register(
-      emailCtrl.text, // Pass the email to the AuthService
-      passwordCtrl.text,
-    );
+    bool ok = await AuthService.register(emailCtrl.text, passwordCtrl.text);
 
     if (!mounted) return;
 
     if (!ok) {
       setState(() {
-        // Updated error message to reflect common Firebase registration errors
-        error = "Registration failed. Email may be invalid, already in use, or password is too weak (min 6 characters)."; 
+        error =
+            "Registration failed. Email may be invalid, already in use, or password is too weak (min 6 characters).";
         isLoading = false;
       });
     } else {
-      // Success! Redirect to the Onboarding Page
       Navigator.pushReplacement(
         context,
-      // User is now logged in, send them directly to onboarding
-      MaterialPageRoute(builder: (_) => const OnboardingPage()),
+        MaterialPageRoute(builder: (_) => const OnboardingPage()),
       );
     }
   }
@@ -77,7 +73,7 @@ class _SignupPageState extends State<SignupPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xff1B1C1E),
+      backgroundColor: AppColors.darkBg,
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
@@ -86,38 +82,68 @@ class _SignupPageState extends State<SignupPage> {
             width: 350,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(20),
-              color: const Color(0xff2A2C2E),
+              color: AppColors.darkBgSecondary,
+              border: Border.all(
+                color: AppColors.primary.withOpacity(0.2),
+                width: 1,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withOpacity(0.1),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text(
+                Text(
                   "Create Account",
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white
-                  )
+                    color: AppColors.textPrimary,
+                  ),
                 ),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   "Sign up to get started",
-                  style: TextStyle(color: Colors.grey),
+                  style: TextStyle(color: AppColors.textTertiary),
                 ),
                 const SizedBox(height: 24),
 
                 // Email Input
                 TextField(
                   controller: emailCtrl,
-                  style: const TextStyle(color: Colors.white),
+                  style: TextStyle(color: AppColors.textPrimary),
                   decoration: InputDecoration(
-                    hintText: "Email", 
-                    hintStyle: const TextStyle(color: Colors.grey),
+                    prefixIcon: Icon(
+                      Icons.email_outlined,
+                      color: AppColors.primary,
+                    ),
+                    hintText: "Email",
+                    hintStyle: TextStyle(color: AppColors.textTertiary),
                     filled: true,
-                    fillColor: const Color(0xff3A3C3E),
+                    fillColor: AppColors.surface,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
+                      borderSide: BorderSide(
+                        color: AppColors.primary.withOpacity(0.2),
+                      ),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(
+                        color: AppColors.primary.withOpacity(0.2),
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(
+                        color: AppColors.primary,
+                        width: 2,
+                      ),
                     ),
                   ),
                 ),
@@ -127,15 +153,34 @@ class _SignupPageState extends State<SignupPage> {
                 TextField(
                   controller: passwordCtrl,
                   obscureText: true,
-                  style: const TextStyle(color: Colors.white),
+                  style: TextStyle(color: AppColors.textPrimary),
                   decoration: InputDecoration(
+                    prefixIcon: Icon(
+                      Icons.lock_outline,
+                      color: AppColors.primary,
+                    ),
                     hintText: "Password",
-                    hintStyle: const TextStyle(color: Colors.grey),
+                    hintStyle: TextStyle(color: AppColors.textTertiary),
                     filled: true,
-                    fillColor: const Color(0xff3A3C3E),
+                    fillColor: AppColors.surface,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
+                      borderSide: BorderSide(
+                        color: AppColors.primary.withOpacity(0.2),
+                      ),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(
+                        color: AppColors.primary.withOpacity(0.2),
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(
+                        color: AppColors.primary,
+                        width: 2,
+                      ),
                     ),
                   ),
                 ),
@@ -145,17 +190,36 @@ class _SignupPageState extends State<SignupPage> {
                 TextField(
                   controller: confirmPasswordCtrl,
                   obscureText: true,
-                  style: const TextStyle(color: Colors.white),
+                  style: TextStyle(color: AppColors.textPrimary),
                   decoration: InputDecoration(
+                    prefixIcon: Icon(
+                      Icons.lock_outline,
+                      color: AppColors.primary,
+                    ),
                     hintText: "Confirm Password",
-                    hintStyle: const TextStyle(color: Colors.grey),
+                    hintStyle: TextStyle(color: AppColors.textTertiary),
                     filled: true,
-                    fillColor: const Color(0xff3A3C3E),
+                    fillColor: AppColors.surface,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
+                      borderSide: BorderSide(
+                        color: AppColors.primary.withOpacity(0.2),
+                      ),
                     ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(
+                        color: AppColors.primary.withOpacity(0.2),
+                      ),
                     ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(
+                        color: AppColors.primary,
+                        width: 2,
+                      ),
+                    ),
+                  ),
                 ),
 
                 // Error Message
@@ -163,7 +227,10 @@ class _SignupPageState extends State<SignupPage> {
                   const SizedBox(height: 12),
                   Text(
                     error,
-                    style: const TextStyle(color: Colors.redAccent, fontSize: 14),
+                    style: const TextStyle(
+                      color: AppColors.error,
+                      fontSize: 14,
+                    ),
                     textAlign: TextAlign.center,
                   ),
                 ],
@@ -174,23 +241,30 @@ class _SignupPageState extends State<SignupPage> {
                 ElevatedButton(
                   onPressed: isLoading ? null : _handleSignup,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.deepPurple,
-                    disabledBackgroundColor: Colors.deepPurple.withOpacity(0.5),
+                    backgroundColor: AppColors.primary,
+                    disabledBackgroundColor: AppColors.primary.withOpacity(0.5),
                     minimumSize: const Size(double.infinity, 48),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
+                    elevation: 0,
                   ),
                   child: isLoading
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
-                      )
-                    : const Text(
-                        "Sign Up",
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)
-                      ),
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : Text(
+                          "Sign Up",
+                          style: TextStyle(
+                            color: AppColors.textPrimary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                 ),
 
                 const SizedBox(height: 16),
@@ -199,22 +273,27 @@ class _SignupPageState extends State<SignupPage> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text("Already have an account? ", style: TextStyle(color: Colors.grey)),
+                    Text(
+                      "Already have an account? ",
+                      style: TextStyle(color: AppColors.textTertiary),
+                    ),
                     GestureDetector(
                       onTap: () {
-                          // Redirect to LoginPage
-                          Navigator.pushReplacement(
+                        Navigator.pushReplacement(
                           context,
                           MaterialPageRoute(builder: (_) => LoginPage()),
                         );
                       },
-                      child: const Text(
+                      child: Text(
                         "Login",
-                        style: TextStyle(color: Colors.deepPurple, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ],
-                )
+                ),
               ],
             ),
           ),

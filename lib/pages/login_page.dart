@@ -1,8 +1,9 @@
-// lib/pages/login_page.dart (FINAL ROBUST FOCUS FIX)
+// lib/pages/login_page.dart (MODERN COLOR SCHEME)
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // REQUIRED for RawKeyboardListener and LogicalKeyboardKey
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../config/app_theme.dart';
 import '../services/auth_service.dart';
 import 'signup_page.dart';
 import 'home_page.dart';
@@ -13,90 +14,86 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final TextEditingController emailCtrl = TextEditingController(); 
+  final TextEditingController emailCtrl = TextEditingController();
   final TextEditingController passwordCtrl = TextEditingController();
-  
-  // 💡 FocusNode for the RawKeyboardListener
-  late final FocusNode _focusNode; 
+
+  late final FocusNode _focusNode;
 
   String error = "";
 
   @override
   void initState() {
     super.initState();
-    // 💡 Must initialize a FocusNode for the RawKeyboardListener
-    _focusNode = FocusNode(); 
+    _focusNode = FocusNode();
   }
 
   @override
   void dispose() {
     emailCtrl.dispose();
     passwordCtrl.dispose();
-    _focusNode.dispose(); 
+    _focusNode.dispose();
     super.dispose();
   }
 
   void handleLogin() async {
-    // Prevent multiple submissions while logging in
-    if (error == "Logging in...") return; 
-    
+    if (error == "Logging in...") return;
+
     setState(() => error = "Logging in...");
 
-    bool ok = await AuthService.login(
-      emailCtrl.text,
-      passwordCtrl.text,
-    );
-    
+    bool ok = await AuthService.login(emailCtrl.text, passwordCtrl.text);
+
     if (!mounted) return;
 
     if (!ok) {
       setState(() => error = "Invalid login credentials.");
     } else {
-      // Success!
-      // NOTE: Using pushReplacement for clean navigation
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(
-          builder: (context) => HomePage(emailCtrl.text),
-        ),
+        MaterialPageRoute(builder: (context) => HomePage(emailCtrl.text)),
       );
     }
   }
 
-  // 💡 Listener function to capture the Enter key press
   void _handleRawKeyEvent(RawKeyEvent event) {
-    // Only proceed on a KeyDown event and verify it's the Enter key
-    if (event is RawKeyDownEvent && event.logicalKey == LogicalKeyboardKey.enter) {
-      // Trigger login
+    if (event is RawKeyDownEvent &&
+        event.logicalKey == LogicalKeyboardKey.enter) {
       handleLogin();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // 💡 NEW: RawKeyboardListener wraps the entire body content
     return RawKeyboardListener(
       focusNode: _focusNode,
       onKey: _handleRawKeyEvent,
       child: Scaffold(
-        backgroundColor: const Color(0xff1B1C1E),
+        backgroundColor: AppColors.darkBg,
         body: Center(
-          // 💡 NEW: Use a Builder to aggressively request focus on every build
           child: Builder(
             builder: (context) {
-              // This is the CRITICAL line: it ensures the RawKeyboardListener always has focus
               if (!_focusNode.hasFocus) {
                 FocusScope.of(context).requestFocus(_focusNode);
               }
-              
+
               return SingleChildScrollView(
                 padding: const EdgeInsets.all(20),
                 child: Container(
                   width: 350,
                   padding: const EdgeInsets.all(28),
                   decoration: BoxDecoration(
-                    color: const Color(0xff2A2C2E),
+                    color: AppColors.darkBgSecondary,
                     borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: AppColors.primary.withOpacity(0.2),
+                      width: 1,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primary.withOpacity(0.1),
+                        blurRadius: 20,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
                   ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -106,31 +103,54 @@ class _LoginPageState extends State<LoginPage> {
                         "BoardGame Buddy",
                         style: GoogleFonts.poppins(
                           fontSize: 24,
-                          color: Colors.white,
+                          color: AppColors.textPrimary,
                           fontWeight: FontWeight.w600,
                         ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        "Welcome back",
+                        style: TextStyle(color: AppColors.textTertiary),
                       ),
                       const SizedBox(height: 20),
 
                       // Email Field
-                      const Text(
-                        "Email", 
-                        style: TextStyle(color: Colors.white70),
+                      Text(
+                        "Email",
+                        style: TextStyle(color: AppColors.textSecondary),
                       ),
                       const SizedBox(height: 6),
                       TextField(
-                        controller: emailCtrl, 
-                        style: const TextStyle(color: Colors.white),
-                        // 💡 ADDED: textInputAction to advance the field flow
+                        controller: emailCtrl,
+                        style: TextStyle(color: AppColors.textPrimary),
                         textInputAction: TextInputAction.next,
                         decoration: InputDecoration(
-                          prefixIcon: const Icon(Icons.email_outlined, color: Colors.grey), 
+                          prefixIcon: Icon(
+                            Icons.email_outlined,
+                            color: AppColors.primary,
+                          ),
                           hintText: "Enter email address",
-                          hintStyle: TextStyle(color: Colors.grey[400]),
+                          hintStyle: TextStyle(color: AppColors.textTertiary),
                           filled: true,
-                          fillColor: const Color(0xff3A3C3E),
+                          fillColor: AppColors.surface,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                              color: AppColors.primary.withOpacity(0.2),
+                            ),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                              color: AppColors.primary.withOpacity(0.2),
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                              color: AppColors.primary,
+                              width: 2,
+                            ),
                           ),
                         ),
                       ),
@@ -138,27 +158,43 @@ class _LoginPageState extends State<LoginPage> {
                       const SizedBox(height: 14),
 
                       // Password
-                      const Text(
+                      Text(
                         "Password",
-                        style: TextStyle(color: Colors.white70),
+                        style: TextStyle(color: AppColors.textSecondary),
                       ),
                       const SizedBox(height: 6),
                       TextField(
                         controller: passwordCtrl,
                         obscureText: true,
-                        style: const TextStyle(color: Colors.white),
-                        // 💡 ADDED: textInputAction to signal submission
+                        style: TextStyle(color: AppColors.textPrimary),
                         textInputAction: TextInputAction.done,
-                        // Keep this for mobile/virtual keyboards
-                        //onSubmitted: (_) => handleLogin(),
                         decoration: InputDecoration(
-                          prefixIcon: const Icon(Icons.lock_outline, color: Colors.grey),
+                          prefixIcon: Icon(
+                            Icons.lock_outline,
+                            color: AppColors.primary,
+                          ),
                           hintText: "Enter password",
-                          hintStyle: TextStyle(color: Colors.grey[400]),
+                          hintStyle: TextStyle(color: AppColors.textTertiary),
                           filled: true,
-                          fillColor: const Color(0xff3A3C3E),
+                          fillColor: AppColors.surface,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                              color: AppColors.primary.withOpacity(0.2),
+                            ),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                              color: AppColors.primary.withOpacity(0.2),
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                              color: AppColors.primary,
+                              width: 2,
+                            ),
                           ),
                         ),
                       ),
@@ -167,12 +203,12 @@ class _LoginPageState extends State<LoginPage> {
                       if (error.isNotEmpty && error != "Logging in...")
                         Text(
                           error,
-                          style: const TextStyle(color: Colors.redAccent),
+                          style: const TextStyle(color: AppColors.error),
                         ),
                       if (error == "Logging in...")
-                        const Text(
+                        Text(
                           "Logging in...",
-                          style: TextStyle(color: Colors.deepPurple),
+                          style: TextStyle(color: AppColors.primary),
                         ),
 
                       const SizedBox(height: 18),
@@ -183,46 +219,68 @@ class _LoginPageState extends State<LoginPage> {
                         child: ElevatedButton(
                           onPressed: handleLogin,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.deepPurple,
+                            backgroundColor: AppColors.primary,
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
+                            elevation: 0,
                           ),
-                          child: const Text("Login", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                          child: Text(
+                            "Login",
+                            style: TextStyle(
+                              color: AppColors.textPrimary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
                       ),
 
                       const SizedBox(height: 22),
 
-                      // Divider and Social Buttons (unchanged for brevity)
+                      // Divider and Social Buttons
                       Row(
-                        children: const [
-                          Expanded(child: Divider(color: Colors.grey)),
+                        children: [
+                          Expanded(child: Divider(color: AppColors.surface)),
                           Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 8),
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
                             child: Text(
                               "Or continue with",
-                              style: TextStyle(color: Colors.grey),
+                              style: TextStyle(color: AppColors.textTertiary),
                             ),
                           ),
-                          Expanded(child: Divider(color: Colors.grey)),
+                          Expanded(child: Divider(color: AppColors.surface)),
                         ],
                       ),
 
                       const SizedBox(height: 22),
 
-                      _socialButton("Google", Icons.circle, Colors.red, () {
-                        debugPrint("Login with Google");
-                      }),
+                      _socialButton(
+                        "Google",
+                        Icons.circle,
+                        const Color(0xFFEA4335),
+                        () {
+                          debugPrint("Login with Google");
+                        },
+                      ),
                       const SizedBox(height: 12),
-                      _socialButton("Facebook", Icons.circle, Colors.blue, () {
-                        debugPrint("Login with Facebook");
-                      }),
+                      _socialButton(
+                        "Facebook",
+                        Icons.circle,
+                        const Color(0xFF1877F2),
+                        () {
+                          debugPrint("Login with Facebook");
+                        },
+                      ),
                       const SizedBox(height: 12),
-                      _socialButton("Twitter", Icons.circle, Colors.lightBlue, () {
-                        debugPrint("Login with Twitter");
-                      }),
+                      _socialButton(
+                        "Twitter",
+                        Icons.circle,
+                        const Color(0xFF1DA1F2),
+                        () {
+                          debugPrint("Login with Twitter");
+                        },
+                      ),
 
                       const SizedBox(height: 24),
 
@@ -235,33 +293,38 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                           );
                         },
-                        child: const Text(
-                          "Don’t have an account? Sign Up",
-                          style: TextStyle(color: Colors.white70),
+                        child: Text(
+                          "Don't have an account? Sign Up",
+                          style: TextStyle(color: AppColors.textSecondary),
                         ),
                       ),
                     ],
                   ),
                 ),
               );
-            }
+            },
           ),
         ),
       ),
     );
   }
 
-  Widget _socialButton(String text, IconData icon, Color iconColor, VoidCallback onTap) {
+  Widget _socialButton(
+    String text,
+    IconData icon,
+    Color iconColor,
+    VoidCallback onTap,
+  ) {
     return SizedBox(
       width: double.infinity,
       child: OutlinedButton(
         style: OutlinedButton.styleFrom(
           padding: const EdgeInsets.symmetric(vertical: 14),
-          side: BorderSide(color: Colors.grey.shade700),
+          side: BorderSide(color: AppColors.surface),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
-          backgroundColor: const Color(0xff3A3C3E),
+          backgroundColor: AppColors.surface.withOpacity(0.5),
         ),
         onPressed: onTap,
         child: Row(
@@ -269,7 +332,7 @@ class _LoginPageState extends State<LoginPage> {
           children: [
             Icon(icon, size: 18, color: iconColor),
             const SizedBox(width: 10),
-            Text(text, style: const TextStyle(color: Colors.white)),
+            Text(text, style: TextStyle(color: AppColors.textPrimary)),
           ],
         ),
       ),
