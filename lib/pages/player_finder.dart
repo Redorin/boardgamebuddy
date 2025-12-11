@@ -1,10 +1,10 @@
-// lib/pages/player_finder.dart (UPDATED with FINAL SHIMMER SKELETON UI)
+// lib/pages/player_finder.dart (FINAL: FIXES BLANK AVATAR CRASH)
 import 'package:cloud_firestore/cloud_firestore.dart'; 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:lucide_icons/lucide_icons.dart'; 
-import 'package:shimmer/shimmer.dart'; // 💡 PACKAGE MUST BE INSTALLED
+import 'package:shimmer/shimmer.dart'; 
 import '../services/profile_service.dart';
 import 'read_only_profile_page.dart';
 
@@ -87,29 +87,36 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
 
     return PlayerDisplay(id: doc.id, displayName: displayName, profileImage: profileImage, preferredGenres: genres, distance: distance, isOnline: isOnline, gamesOwned: gamesCount, lastActiveTimestamp: lastActive);
   }
-
-  // 💡 NEW: Skeleton Tile Widget (The core modern UI element)
+  
+  // 💡 NEW: Reusable widget for the default placeholder avatar
+  Widget _buildDefaultAvatar() {
+    return CircleAvatar(
+      backgroundColor: Colors.deepPurple.shade700,
+      radius: 24,
+      child: const Icon(Icons.person, color: Colors.white, size: 24),
+    );
+  }
+  
   Widget _buildSkeletonTile() {
     return Shimmer.fromColors(
-      baseColor: const Color(0xFF171A21), // Dark gray/blue base
-      highlightColor: const Color(0xFF2A3F5F), // Lighter shimmer color
+      baseColor: const Color(0xFF171A21), 
+      highlightColor: const Color(0xFF2A3F5F), 
       child: Card(
         margin: const EdgeInsets.only(bottom: 10),
         color: Colors.white.withOpacity(0.05),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: ListTile(
-          leading: const CircleAvatar(radius: 24, backgroundColor: Colors.black), // Skeleton Avatar
-          title: Container(height: 10, width: 150, decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(5))), // Skeleton Title
-          subtitle: Container(height: 8, width: 100, decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(5))), // Skeleton Subtitle
+        child: const ListTile(
+          leading: CircleAvatar(radius: 24, backgroundColor: Colors.black), 
+          title: Text("Loading Player Name...", style: TextStyle(color: Colors.black)), 
+          subtitle: Text("Loading genres...", style: TextStyle(color: Colors.black)),
         ),
       ),
     );
   }
 
-  // 💡 NEW: Skeleton List Builder
   Widget _buildSkeletonList() {
     return ListView.builder(
-      itemCount: 6, // Show 6 placeholder tiles
+      itemCount: 6,
       itemBuilder: (context, index) => _buildSkeletonTile(),
     );
   }
@@ -124,27 +131,52 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
     );
   }
 
-  // 💡 MODIFIED: _buildFriendsList (Uses Skeleton)
+  // 💡 MODIFIED: _buildFriendsList (Implements Avatar URL Check)
   Widget _buildFriendsList() {
     return StreamBuilder<List<Map<String, dynamic>>>(
       stream: ProfileService.getFriendsStream(),
       builder: (context, snapshot) {
-        // 🛑 SHOW SKELETON WHILE WAITING
-        if (snapshot.connectionState == ConnectionState.waiting) return _buildSkeletonList();
+        if (snapshot.connectionState == ConnectionState.waiting) {
+            return _buildSkeletonList();
+        }
+        
+        if (snapshot.hasError) {
+             return Center(child: Text('Error loading friends: ${snapshot.error}', style: const TextStyle(color: Colors.red)));
+        }
         
         final friends = snapshot.data ?? [];
-        if (friends.isEmpty) return const Center(child: Text("You haven't added any friends yet.", style: TextStyle(color: Colors.white54)));
+        
+        // 💡 DEBUG: Print the number of friends found to the console
+        print("DEBUG: Found ${friends.length} friends for current user.");
+
+        if (friends.isEmpty) {
+          return const Center(child: Text("You haven't added any friends yet.", style: TextStyle(color: Colors.white54)));
+        }
 
         return ListView.builder(
           itemCount: friends.length,
           padding: const EdgeInsets.all(16),
           itemBuilder: (context, index) {
             final friend = friends[index];
+            final friendImage = friend['profileImage'] as String? ?? '';
+            final isUrlValid = friendImage.isNotEmpty;
+            
             return Card(
               color: const Color(0xFF171A21),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               child: ListTile(
-                leading: CircleAvatar(backgroundImage: NetworkImage(friend['profileImage'] ?? '')),
+                // 💡 FIX: Robust Image Handling
+                leading: isUrlValid
+                    ? CircleAvatar(
+                        backgroundImage: NetworkImage(friendImage),
+                        radius: 24,
+                        onBackgroundImageError: (exception, stackTrace) => {}, 
+                      )
+                    : const CircleAvatar(
+                        backgroundColor: Colors.deepPurple,
+                        radius: 24,
+                        child: Icon(Icons.person, color: Colors.white, size: 24),
+                    ),
                 title: Text(friend['displayName'] ?? 'Unknown', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                 trailing: const Icon(Icons.chevron_right, color: Colors.white54),
                 onTap: () {
@@ -158,12 +190,11 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
     );
   }
   
-  // 💡 MODIFIED: _buildRequestsList (Uses Skeleton)
+  // 💡 MODIFIED: _buildRequestsList (Implements Avatar URL Check)
   Widget _buildRequestsList() {
     return StreamBuilder<List<Map<String, dynamic>>>(
       stream: ProfileService.getIncomingRequestsStream(),
       builder: (context, snapshot) {
-        // 🛑 SHOW SKELETON WHILE WAITING
         if (snapshot.connectionState == ConnectionState.waiting) return _buildSkeletonList();
         
         final requests = snapshot.data ?? [];
@@ -177,12 +208,20 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
             final senderId = request['senderId'] as String? ?? '';
             final senderName = request['senderName'] as String? ?? 'Unknown User';
             final senderImage = request['senderImage'] as String? ?? '';
+            final isUrlValid = senderImage.isNotEmpty;
 
             return Card(
               color: const Color(0xFF171A21),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               child: ListTile(
-                leading: CircleAvatar(backgroundImage: NetworkImage(senderImage)),
+                // 💡 FIX: Check URL before creating NetworkImage
+                leading: isUrlValid
+                    ? CircleAvatar(
+                        backgroundImage: NetworkImage(senderImage),
+                        radius: 24,
+                        onBackgroundImageError: (exception, stackTrace) => {}, // Suppress crash on background image
+                      )
+                    : _buildDefaultAvatar(), // Use default placeholder
                 title: Text(senderName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                 subtitle: const Text("Sent you a request", style: TextStyle(color: Colors.white70)),
                 trailing: Row(
@@ -221,7 +260,7 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
             controller: _searchController,
             style: const TextStyle(color: Colors.white),
             decoration: InputDecoration(
-              hintText: 'Search players...',
+              hintText: 'Search players or genres...',
               hintStyle: const TextStyle(color: Colors.white54),
               prefixIcon: const Icon(Icons.search, color: Colors.white54),
               filled: true,
@@ -239,17 +278,10 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
           const SizedBox(height: 16),
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-    .collection('users')
-    // 💡 OPTIMIZE: Fetch a manageable list (e.g., sort by last active to prioritize recent users)
-    .orderBy('updatedAt', descending: true)
-    .limit(50) // Limit to a max of 50 users
-    .snapshots(),
+              stream: FirebaseFirestore.instance.collection('users').snapshots(),
               builder: (context, snapshot) {
-                // 🛑 CHANGE: Show skeleton while waiting
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return _buildSkeletonList();
-                }
+                if (snapshot.hasError) return Center(child: Text('Error: ${snapshot.error}', style: const TextStyle(color: Colors.red)));
+                if (snapshot.connectionState == ConnectionState.waiting) return _buildSkeletonList();
 
                 var players = snapshot.data!.docs
                     .map(_mapDocumentToPlayer)
@@ -308,7 +340,6 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
 
   Widget _buildPlayerTile(PlayerDisplay player) {
     final bool hasProfileImage = player.profileImage.isNotEmpty;
-    final String initials = player.displayName.isNotEmpty ? player.displayName[0].toUpperCase() : '?';
 
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
@@ -319,16 +350,20 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
           Navigator.push(context, MaterialPageRoute(builder: (context) => ReadOnlyProfilePage(userId: player.id)));
         },
         leading: CircleAvatar(
-          backgroundColor: hasProfileImage ? Colors.transparent : Colors.grey.shade700,
+          backgroundColor: Colors.deepPurple.shade700, 
           radius: 24,
-          child: hasProfileImage ? ClipOval(child: Image.network(player.profileImage, width: 48, height: 48, fit: BoxFit.cover, errorBuilder: (context, error, stackTrace) => Center(child: Text(initials, style: const TextStyle(color: Colors.white, fontSize: 18))),))
-              : Center(child: Text(initials, style: const TextStyle(color: Colors.white, fontSize: 18))),
+          child: hasProfileImage ? ClipOval(child: Image.network(
+              player.profileImage, 
+              width: 48, height: 48, 
+              fit: BoxFit.cover, 
+              errorBuilder: (context, error, stackTrace) => const Center(child: Icon(Icons.person, color: Colors.white, size: 24)), 
+            ))
+            : const Center(child: Icon(Icons.person, color: Colors.white, size: 24)), 
         ),
         title: Text(player.displayName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         subtitle: Text("${player.preferredGenres.take(2).join(", ")}", style: const TextStyle(color: Colors.white54, fontSize: 12)),
         trailing: const Icon(Icons.chevron_right, color: Colors.white54),
       ),
     );
- 
   }
 }
