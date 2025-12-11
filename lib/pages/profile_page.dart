@@ -513,44 +513,9 @@ class _ProfilePageState extends State<ProfilePage> {
         children: [
           _buildSectionHeader('Preferred Genres', const Color(0xFFF97316)),
           const SizedBox(height: 12),
-          Container(
-            margin: const EdgeInsets.only(bottom: 16),
-            child: _isEditing
-                ? SizedBox(
-                    width: 200,
-                    child: TextField(
-                      controller: _topGenreController,
-                      decoration: const InputDecoration(
-                        isDense: true,
-                        contentPadding: EdgeInsets.symmetric(
-                          vertical: 8,
-                          horizontal: 10,
-                        ),
-                        hintText: 'Top genre',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                  )
-                : Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(20),
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF2563EB), Color(0xFFF97316)],
-                      ),
-                    ),
-                    child: Text(
-                      '⭐ ${currentProfile.topGenre}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-          ),
+          
+          // --- REMOVED: Top Genre Container (Gradient Pill / TextField) ---
+          
           Wrap(
             spacing: 8.0,
             runSpacing: 8.0,

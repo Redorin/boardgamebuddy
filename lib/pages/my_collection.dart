@@ -250,17 +250,8 @@ class _MyCollectionPageState extends State<MyCollectionPage> {
                   height: 40,
                   child: Row(
                     children: [
-                      IconButton(
-                        onPressed: () {},
-                        icon: const Icon(
-                          LucideIcons.slidersHorizontal,
-                          size: 20,
-                          color: grayText,
-                        ),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                      ),
-                      const SizedBox(width: 8),
+                      // REMOVED: IconButton (Filter/Sliders) was here
+                      
                       Container(
                         decoration: BoxDecoration(
                           color: inputBg,
