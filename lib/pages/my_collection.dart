@@ -1,6 +1,7 @@
 // lib/pages/my_collection.dart (UPDATED with Shimmer Skeletons)
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'dart:async';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:shimmer/shimmer.dart'; // 💡 NEW: For skeleton loading
 import '../services/game_service.dart';
@@ -22,6 +23,7 @@ class _MyCollectionPageState extends State<MyCollectionPage> {
   String _searchQuery = '';
   CollectionViewMode _viewMode = CollectionViewMode.grid;
 
+Timer? _debounce;
   // Define Shimmer Colors for dark theme consistency
   static const Color _shimmerBaseColor = Color(0xFF171A21);
   static const Color _shimmerHighlightColor = Color(0xFF2A3F5F);
@@ -29,15 +31,18 @@ class _MyCollectionPageState extends State<MyCollectionPage> {
   @override
   void initState() {
     super.initState();
-    _searchController.addListener(_updateSearchQuery);
+    _searchController.addListener(_onSearchChanged);
   }
 
-  void _updateSearchQuery() {
-    if (_searchQuery != _searchController.text.trim()) {
-      setState(() {
-        _searchQuery = _searchController.text.trim();
-      });
-    }
+  void _onSearchChanged() {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () {
+      if (mounted && _searchQuery != _searchController.text.trim()) {
+        setState(() {
+          _searchQuery = _searchController.text.trim();
+        });
+      }
+    });
   }
 
   void _toggleViewMode(CollectionViewMode mode) {
@@ -48,7 +53,7 @@ class _MyCollectionPageState extends State<MyCollectionPage> {
 
   @override
   void dispose() {
-    _searchController.removeListener(_updateSearchQuery);
+    _debounce?.cancel();
     _searchController.dispose();
     super.dispose();
   }
