@@ -152,17 +152,25 @@ class ProfileService {
   }
 
   // 💡 7. SEND FRIEND REQUEST
-  static Future<void> sendFriendRequest(String targetId, String senderName, String senderImage) async {
+  static Future<void> sendFriendRequest(String targetId) async {
     final senderId = _auth.currentUser?.uid;
     if (senderId == null || targetId.isEmpty) return;
+
+    // 💡 FIX: Fetch current user's (sender's) profile details from Firestore
+    final senderDoc = await _db.collection('users').doc(senderId).get();
+    final senderData = senderDoc.data();
+    if (senderData == null) return;
+    
+    final senderName = senderData['displayName'] as String? ?? 'Anonymous User';
+    final senderImage = senderData['profileImage'] as String? ?? '';
 
     final targetRequestRef = _db.collection('users').doc(targetId).collection('friendRequests').doc(senderId);
 
     try {
       await targetRequestRef.set({
         'senderId': senderId,
-        'senderName': senderName,
-        'senderImage': senderImage,
+        'senderName': senderName, // Now from internal fetch
+        'senderImage': senderImage, // Now from internal fetch
         'sentAt': FieldValue.serverTimestamp(),
       });
     } catch (e) {

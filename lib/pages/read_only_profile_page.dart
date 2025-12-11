@@ -102,10 +102,9 @@ class _ReadOnlyProfilePageState extends State<ReadOnlyProfilePage> {
                           width: double.infinity,
                           child: ElevatedButton.icon(
                             onPressed: isRequestPending ? null : () async {
-                              final senderName = profile.displayName;
-                              final senderImage = profile.profileImage;
-                              
-                              await ProfileService.sendFriendRequest(widget.userId, senderName, senderImage);
+                              // 🛑 FIX: Removed incorrect fetching of profile.displayName and profile.profileImage
+                              // The service now fetches the CURRENT authenticated user's details directly.
+                              await ProfileService.sendFriendRequest(widget.userId);
                               if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Friend request sent!"), backgroundColor: Colors.deepPurple));
                             },
                             icon: Icon(isRequestPending ? Icons.check : Icons.person_add, color: Colors.white),
