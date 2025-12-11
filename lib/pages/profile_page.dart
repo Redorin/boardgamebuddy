@@ -7,6 +7,39 @@ import '../models/board_game.dart';
 
 // --- Data Models (Ensure these match your file's structure) ---
 
+const List<String> MASTER_GENRE_LIST = [
+  'Strategy',
+  'Engine Building',
+  'Area Control',
+  'Abstract Strategy',
+  'Worker Placement',
+  'Deck Building',
+  'Tile Placement',
+  'Economics',
+  'Tech Tree',
+  'Cooperative',
+  'RPG',
+  'Campaign',
+  'Thematic',
+  'Horror',
+  'App Driven',
+  'Card Game',
+  'Survival',
+  'Asymmetric',
+  'Push Your Luck',
+  'Dice Rolling',
+  'Card Drafting',
+  'Party Game',
+  'Drawing',
+  'Word',
+  'Deduction',
+  'Abstract',
+  '2-Player',
+  'Family',
+  'Miniatures',
+];
+
+
 class FavoriteGame {
   final String id;
   final String name;
@@ -94,7 +127,7 @@ class _ProfilePageState extends State<ProfilePage> {
   late TextEditingController _aboutMeController;
   late TextEditingController _topGenreController;
   late TextEditingController _ownedGamesCountController;
-  late TextEditingController _newGenreController;
+  //late TextEditingController _newGenreController;
 
   static const String _defaultProfileImage = '';
 
@@ -118,7 +151,7 @@ class _ProfilePageState extends State<ProfilePage> {
     _ownedGamesCountController = TextEditingController(
       text: _profile.ownedGamesCount.toString(),
     );
-    _newGenreController = TextEditingController();
+    //_newGenreController = TextEditingController();
   }
 
   @override
@@ -127,7 +160,7 @@ class _ProfilePageState extends State<ProfilePage> {
     _aboutMeController.dispose();
     _topGenreController.dispose();
     _ownedGamesCountController.dispose();
-    _newGenreController.dispose();
+    //_newGenreController.dispose();
     super.dispose();
   }
 
@@ -197,19 +230,6 @@ class _ProfilePageState extends State<ProfilePage> {
       _editedProfile = _profile.copyWith();
       _isEditing = false;
     });
-  }
-
-  void _addGenre(String genre) {
-    String trimmedGenre = genre.trim();
-    if (trimmedGenre.isNotEmpty &&
-        !_editedProfile.preferredGenres.contains(trimmedGenre)) {
-      setState(() {
-        _editedProfile = _editedProfile.copyWith(
-          preferredGenres: [..._editedProfile.preferredGenres, trimmedGenre],
-        );
-      });
-      _newGenreController.clear();
-    }
   }
 
   void _removeGenre(String genreToRemove) {
@@ -295,6 +315,24 @@ class _ProfilePageState extends State<ProfilePage> {
       setState(() {
         // Update the edited profile state with the new URL
         _editedProfile = _editedProfile.copyWith(profileImage: resultUrl);
+      });
+    }
+  }
+
+  void _showGenreSelectionDialog() async {
+    if (!_isEditing) return;
+
+    final List<String>? resultGenres = await showDialog<List<String>>(
+      context: context,
+      builder: (context) => GenreSelectionDialog(
+        currentGenres: _editedProfile.preferredGenres,
+        allGenres: MASTER_GENRE_LIST,
+      ),
+    );
+
+    if (resultGenres != null) {
+      setState(() {
+        _editedProfile = _editedProfile.copyWith(preferredGenres: resultGenres);
       });
     }
   }
@@ -561,22 +599,12 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
               ),
               if (_isEditing)
-                SizedBox(
-                  width: 120,
-                  height: 32,
-                  child: TextField(
-                    controller: _newGenreController,
-                    decoration: const InputDecoration(
-                      hintText: 'Add genre...',
-                      isDense: true,
-                      contentPadding: EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
-                      border: OutlineInputBorder(),
-                    ),
-                    onSubmitted: _addGenre,
-                  ),
+                _buildButton(
+                  onPressed: _showGenreSelectionDialog,
+                  text: 'Select Genres',
+                  icon: Icons.list_alt,
+                  backgroundColor: const Color(0xFF14B8A6), // Teal color
+                  textColor: Colors.white,
                 ),
             ],
           ),
@@ -1033,6 +1061,98 @@ class AvatarSelectionDialog extends StatelessWidget {
           onPressed: () =>
               Navigator.pop(context, null), // Return null if cancelled
           child: const Text("Cancel"),
+        ),
+      ],
+    );
+  }
+}
+
+class GenreSelectionDialog extends StatefulWidget {
+  final List<String> currentGenres;
+  final List<String> allGenres;
+  
+  const GenreSelectionDialog({
+    Key? key,
+    required this.currentGenres,
+    required this.allGenres,
+  }) : super(key: key);
+
+  @override
+  State<GenreSelectionDialog> createState() => _GenreSelectionDialogState();
+}
+
+class _GenreSelectionDialogState extends State<GenreSelectionDialog> {
+  late List<String> _selectedGenres;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedGenres = List.from(widget.currentGenres);
+  }
+
+  void _toggleGenre(String genre) {
+    setState(() {
+      if (_selectedGenres.contains(genre)) {
+        _selectedGenres.remove(genre);
+      } else {
+        _selectedGenres.add(genre);
+      }
+    });
+  }
+
+  Widget _buildGenreChip(String genre) {
+    final isSelected = _selectedGenres.contains(genre);
+    return FilterChip(
+      label: Text(genre),
+      selected: isSelected,
+      onSelected: (bool selected) {
+        _toggleGenre(genre);
+      },
+      selectedColor: const Color(0xFF6366F1), // Primary Indigo color
+      checkmarkColor: Colors.white,
+      labelStyle: TextStyle(
+        color: isSelected ? Colors.white : const Color(0xFF374151),
+        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+      ),
+      backgroundColor: const Color(0xFFEFF6FF), // Light background
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text("Select Preferred Genres"),
+      content: SizedBox(
+        width: MediaQuery.of(context).size.width * 0.8,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Wrap(
+                spacing: 8.0,
+                runSpacing: 8.0,
+                children: widget.allGenres.map(_buildGenreChip).toList(),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                "${_selectedGenres.length} selected",
+                style: const TextStyle(color: Color(0xFF4B5563)),
+              )
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context), // Cancelled
+          child: const Text("Cancel"),
+        ),
+        ElevatedButton(
+          onPressed: () => Navigator.pop(context, _selectedGenres), // Return list
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF6366F1),
+          ),
+          child: const Text("Save", style: TextStyle(color: Colors.white)),
         ),
       ],
     );

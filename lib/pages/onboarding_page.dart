@@ -283,11 +283,36 @@ class GenreSetup extends StatefulWidget {
 class _GenreSetupState extends State<GenreSetup> {
   List<String> _preferredGenres = [];
   
-  final List<String> _allGenres = [
-    'Strategy', 'Eurogame', 'Deck Building', 
-    'Cooperative', 'Party Game', 'Thematic', 
-    'Abstract', 'Miniatures', 'Legacy', 
-    'Dice Rolling', 'Worker Placement'
+  final List<String> _allGenres = const [
+    'Strategy',
+    'Engine Building',
+    'Area Control',
+    'Abstract Strategy',
+    'Worker Placement',
+    'Deck Building',
+    'Tile Placement',
+    'Economics',
+    'Tech Tree',
+    'Cooperative',
+    'RPG',
+    'Campaign',
+    'Thematic',
+    'Horror',
+    'App Driven',
+    'Card Game',
+    'Survival',
+    'Asymmetric',
+    'Push Your Luck',
+    'Dice Rolling',
+    'Card Drafting',
+    'Party Game',
+    'Drawing',
+    'Word',
+    'Deduction',
+    'Abstract',
+    '2-Player',
+    'Family',
+    'Miniatures',
   ];
 
   void _toggleGenre(String genre) {
