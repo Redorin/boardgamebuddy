@@ -8,6 +8,8 @@ class ProfileService {
   static final FirebaseFirestore _db = FirebaseFirestore.instance;
   static final FirebaseAuth _auth = FirebaseAuth.instance;
 
+  static DateTime? _lastSuccessfulLocationUpdate;
+
   static DocumentReference? _getUserDocRef() {
     final userId = _auth.currentUser?.uid;
     if (userId == null) return null;
@@ -109,6 +111,11 @@ class ProfileService {
 
   // 5. Update Location
   static Future<void> updateCurrentLocation() async {
+    if (_lastSuccessfulLocationUpdate != null && 
+        DateTime.now().difference(_lastSuccessfulLocationUpdate!).inMinutes < 5) {
+      print('Location update skipped: too soon.');
+      return; 
+    }
     final userDocRef = _getUserDocRef();
     if (userDocRef == null) return;
     try {
@@ -127,6 +134,8 @@ class ProfileService {
         'lastLocationUpdate': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(), 
       });
+
+      _lastSuccessfulLocationUpdate = DateTime.now();
     } catch (e) {
       print('Location update failed: $e');
     }

@@ -239,7 +239,12 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
           const SizedBox(height: 16),
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance.collection('users').snapshots(),
+              stream: FirebaseFirestore.instance
+    .collection('users')
+    // 💡 OPTIMIZE: Fetch a manageable list (e.g., sort by last active to prioritize recent users)
+    .orderBy('updatedAt', descending: true)
+    .limit(50) // Limit to a max of 50 users
+    .snapshots(),
               builder: (context, snapshot) {
                 // 🛑 CHANGE: Show skeleton while waiting
                 if (snapshot.connectionState == ConnectionState.waiting) {
