@@ -5,7 +5,6 @@ import 'package:lucide_icons/lucide_icons.dart';
 import '../config/app_theme.dart';
 import '../services/game_service.dart';
 import '../services/auth_service.dart';
-import '../services/profile_service.dart';
 import '../models/board_game.dart';
 import 'player_finder.dart';
 import 'profile_page.dart';
@@ -27,7 +26,7 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    ProfileService.updateCurrentLocation();
+    //ProfileService.updateCurrentLocation();
   }
 
   void _handleLogout() async {

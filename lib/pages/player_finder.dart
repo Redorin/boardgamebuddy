@@ -2,7 +2,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart'; 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:lucide_icons/lucide_icons.dart'; 
 import 'package:shimmer/shimmer.dart'; 
 import '../services/profile_service.dart';
@@ -14,15 +13,14 @@ class PlayerDisplay {
   final String displayName;
   final String profileImage; 
   final List<String> preferredGenres; 
-  final double distance;
   final bool isOnline;
   final int gamesOwned;
   final DateTime lastActiveTimestamp;
 
-  PlayerDisplay({required this.id, required this.displayName, required this.profileImage, required this.preferredGenres, this.distance = 999.0, this.isOnline = false, this.gamesOwned = 0, required this.lastActiveTimestamp});
+  PlayerDisplay({required this.id, required this.displayName, required this.profileImage, required this.preferredGenres, this.isOnline = false, this.gamesOwned = 0, required this.lastActiveTimestamp});
 }
 
-enum SortOption { distance, active, games }
+enum SortOption { active, games }
 
 class PlayerFinderPage extends StatefulWidget {
   const PlayerFinderPage({Key? key}) : super(key: key);
@@ -33,37 +31,21 @@ class PlayerFinderPage extends StatefulWidget {
 
 class _PlayerFinderPageState extends State<PlayerFinderPage> {
   String _searchQuery = '';
-  SortOption _sortBy = SortOption.distance;
-  double _maxDistance = 50.0; 
+  SortOption _sortBy = SortOption.active;
   bool _showOnlineOnly = false;
   
   final TextEditingController _searchController = TextEditingController();
-  Position? _userCurrentPosition;
-  bool _isLocationLoading = true; 
 
   @override
   void initState() {
     super.initState();
     _searchController.addListener(() => setState(() => _searchQuery = _searchController.text));
-    _initializeLocation();
   }
   
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
-  }
-  
-  void _initializeLocation() async {
-    ProfileService.updateCurrentLocation(); 
-    try {
-      Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
-      if (mounted) setState(() => _userCurrentPosition = position);
-    } catch (e) {
-      print("Location error: $e");
-    } finally {
-      if (mounted) setState(() => _isLocationLoading = false);
-    }
   }
 
   PlayerDisplay _mapDocumentToPlayer(DocumentSnapshot doc) {
@@ -74,18 +56,8 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
     final gamesCount = (data['ownedGamesCount'] as num?)?.toInt() ?? 0;
     final lastActive = (data['updatedAt'] as Timestamp?)?.toDate() ?? DateTime(2000);
     final isOnline = DateTime.now().difference(lastActive).inMinutes < 15;
-    
-    double distance = 999.0;
-    if (_userCurrentPosition != null && data['location'] != null) {
-      try {
-        final loc = data['location'];
-        final lat = (loc['lat'] as num).toDouble();
-        final lng = (loc['lng'] as num).toDouble();
-        distance = Geolocator.distanceBetween(_userCurrentPosition!.latitude, _userCurrentPosition!.longitude, lat, lng) / 1609.34;
-      } catch (e) {}
-    }
 
-    return PlayerDisplay(id: doc.id, displayName: displayName, profileImage: profileImage, preferredGenres: genres, distance: distance, isOnline: isOnline, gamesOwned: gamesCount, lastActiveTimestamp: lastActive);
+    return PlayerDisplay(id: doc.id, displayName: displayName, profileImage: profileImage, preferredGenres: genres, isOnline: isOnline, gamesOwned: gamesCount, lastActiveTimestamp: lastActive);
   }
   
   // 💡 NEW: Reusable widget for the default placeholder avatar

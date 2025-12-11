@@ -2,13 +2,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:async';
-import 'package:geolocator/geolocator.dart'; 
 
 class ProfileService {
   static final FirebaseFirestore _db = FirebaseFirestore.instance;
   static final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  static DateTime? _lastSuccessfulLocationUpdate;
+  //static DateTime? _lastSuccessfulLocationUpdate;
 
   static DocumentReference? _getUserDocRef() {
     final userId = _auth.currentUser?.uid;
@@ -106,38 +105,6 @@ class ProfileService {
       return profilesData;
     } catch (e) {
       return {};
-    }
-  }
-
-  // 5. Update Location
-  static Future<void> updateCurrentLocation() async {
-    if (_lastSuccessfulLocationUpdate != null && 
-        DateTime.now().difference(_lastSuccessfulLocationUpdate!).inMinutes < 5) {
-      print('Location update skipped: too soon.');
-      return; 
-    }
-    final userDocRef = _getUserDocRef();
-    if (userDocRef == null) return;
-    try {
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) return; 
-
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) return;
-      }
-
-      Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
-      await userDocRef.update({
-        'location': {'lat': position.latitude, 'lng': position.longitude},
-        'lastLocationUpdate': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(), 
-      });
-
-      _lastSuccessfulLocationUpdate = DateTime.now();
-    } catch (e) {
-      print('Location update failed: $e');
     }
   }
 
