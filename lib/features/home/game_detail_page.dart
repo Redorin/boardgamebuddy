@@ -1,10 +1,10 @@
-// lib/pages/game_detail_page.dart
+// lib/features/home/game_detail_page.dart
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import '../services/game_service.dart';
-import '../models/board_game.dart';
-import '../config/app_theme.dart';
+import '../../core/services/game_service.dart';
+import '../../core/models/board_game.dart';
+import '../../shared/config/app_theme.dart';
 
 class GameDetailPage extends StatelessWidget {
   final BoardGame game;

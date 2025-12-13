@@ -1,4 +1,4 @@
-// lib/pages/profile_page.dart (FINAL, UPDATED FOR USERNAME SYNC)
+// lib/pages/profile_page.dart (FINAL, UPDATED FOR USERNAME SYNC & EDITABLE FAVORITES)
 import 'package:flutter/material.dart';
 import '../utils/avatar_urls.dart'; // Retained for AVATAR_URLS constant
 import '../services/profile_service.dart';
@@ -38,7 +38,6 @@ const List<String> MASTER_GENRE_LIST = [
   'Family',
   'Miniatures',
 ];
-
 
 class FavoriteGame {
   final String id;
@@ -242,6 +241,17 @@ class _ProfilePageState extends State<ProfilePage> {
     });
   }
 
+  /// New helper to remove a favorite game while editing (immediate UI feedback)
+  void _removeFavorite(String favoriteId) {
+    setState(() {
+      _editedProfile = _editedProfile.copyWith(
+        favoriteGames: _editedProfile.favoriteGames
+            .where((g) => g.id != favoriteId)
+            .toList(),
+      );
+    });
+  }
+
   void _updateProfileState(Map<String, dynamic> data) async {
     if (data.isNotEmpty) {
       final List<String> genres =
@@ -289,18 +299,18 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  void _showManageFavoritesDialog() async {
-    final List<FavoriteGame>? result = await showDialog<List<FavoriteGame>>(
+  void _showManageFavoritesDialog() {
+    showDialog(
       context: context,
-      builder: (context) =>
-          ManageFavoritesDialog(currentFavorites: _editedProfile.favoriteGames),
+      builder: (context) => ManageFavoritesDialog(
+        currentFavorites: _editedProfile.favoriteGames,
+        onSelectionChanged: (selected) {
+          setState(() {
+            _editedProfile = _editedProfile.copyWith(favoriteGames: selected);
+          });
+        },
+      ),
     );
-
-    if (result != null) {
-      setState(() {
-        _editedProfile = _editedProfile.copyWith(favoriteGames: result);
-      });
-    }
   }
 
   void _showAvatarSelectionDialog() async {
@@ -513,9 +523,8 @@ class _ProfilePageState extends State<ProfilePage> {
         children: [
           _buildSectionHeader('Preferred Genres', const Color(0xFFF97316)),
           const SizedBox(height: 12),
-          
+
           // --- REMOVED: Top Genre Container (Gradient Pill / TextField) ---
-          
           Wrap(
             spacing: 8.0,
             runSpacing: 8.0,
@@ -621,11 +630,29 @@ class _ProfilePageState extends State<ProfilePage> {
           SizedBox(
             height: 180,
             child: currentProfile.favoriteGames.isEmpty
-                ? const Center(
-                    child: Text(
-                      "No favorites selected",
-                      style: TextStyle(color: Colors.grey),
-                    ),
+                ? Center(
+                    child: _isEditing
+                        ? Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text(
+                                "No favorites selected",
+                                style: TextStyle(color: Colors.grey),
+                              ),
+                              const SizedBox(height: 8),
+                              _buildButton(
+                                onPressed: _showManageFavoritesDialog,
+                                icon: Icons.add,
+                                text: 'Select Top 5',
+                                backgroundColor: const Color(0xFFFDE047),
+                                textColor: Colors.black,
+                              ),
+                            ],
+                          )
+                        : const Text(
+                            "No favorites selected",
+                            style: TextStyle(color: Colors.grey),
+                          ),
                   )
                 : SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
@@ -634,7 +661,46 @@ class _ProfilePageState extends State<ProfilePage> {
                         for (var game in currentProfile.favoriteGames)
                           Padding(
                             padding: const EdgeInsets.only(right: 12),
-                            child: GameCard(game: game),
+                            child: Stack(
+                              clipBehavior: Clip.none,
+                              children: [
+                                GameCard(game: game),
+                                if (_isEditing) // Show small remove button in edit mode
+                                  Positioned(
+                                    top: -8,
+                                    right: -8,
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        // Operate on editedProfile to keep changes local until save
+                                        _removeFavorite(game.id);
+                                      },
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          shape: BoxShape.circle,
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.black.withOpacity(
+                                                0.12,
+                                              ),
+                                              blurRadius: 4,
+                                              offset: const Offset(0, 2),
+                                            ),
+                                          ],
+                                        ),
+                                        child: const Padding(
+                                          padding: EdgeInsets.all(4.0),
+                                          child: Icon(
+                                            Icons.close,
+                                            size: 16,
+                                            color: Color(0xFFDC2626),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
                           ),
                       ],
                     ),
@@ -830,8 +896,12 @@ class _ProfilePageState extends State<ProfilePage> {
 // --- Manage Favorites Dialog (Unchanged) ---
 class ManageFavoritesDialog extends StatefulWidget {
   final List<FavoriteGame> currentFavorites;
-  const ManageFavoritesDialog({Key? key, required this.currentFavorites})
-    : super(key: key);
+  final Function(List<FavoriteGame>) onSelectionChanged;
+  const ManageFavoritesDialog({
+    Key? key,
+    required this.currentFavorites,
+    required this.onSelectionChanged,
+  }) : super(key: key);
   @override
   State<ManageFavoritesDialog> createState() => _ManageFavoritesDialogState();
 }
@@ -892,6 +962,18 @@ class _ManageFavoritesDialogState extends State<ManageFavoritesDialog> {
                               _selectedIds.remove(game.id);
                             }
                           });
+                          // Auto-save selection
+                          final List<FavoriteGame> selectedFavorites = myGames
+                              .where((game) => _selectedIds.contains(game.id))
+                              .map(
+                                (game) => FavoriteGame(
+                                  id: game.id,
+                                  name: game.name,
+                                  image: game.thumbnailUrl,
+                                ),
+                              )
+                              .toList();
+                          widget.onSelectionChanged(selectedFavorites);
                         },
                       );
                     },
@@ -1035,7 +1117,7 @@ class AvatarSelectionDialog extends StatelessWidget {
 class GenreSelectionDialog extends StatefulWidget {
   final List<String> currentGenres;
   final List<String> allGenres;
-  
+
   const GenreSelectionDialog({
     Key? key,
     required this.currentGenres,
@@ -1102,7 +1184,7 @@ class _GenreSelectionDialogState extends State<GenreSelectionDialog> {
               Text(
                 "${_selectedGenres.length} selected",
                 style: const TextStyle(color: Color(0xFF4B5563)),
-              )
+              ),
             ],
           ),
         ),
@@ -1113,7 +1195,8 @@ class _GenreSelectionDialogState extends State<GenreSelectionDialog> {
           child: const Text("Cancel"),
         ),
         ElevatedButton(
-          onPressed: () => Navigator.pop(context, _selectedGenres), // Return list
+          onPressed: () =>
+              Navigator.pop(context, _selectedGenres), // Return list
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF6366F1),
           ),

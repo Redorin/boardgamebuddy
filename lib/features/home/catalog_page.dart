@@ -1,11 +1,12 @@
-// lib/pages/catalog_page.dart (FINAL: ADDED SEARCH BAR)
+// lib/features/home/catalog_page.dart (FINAL: ADDED SEARCH BAR)
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:lucide_icons/lucide_icons.dart'; // Ensure this is imported
-import '../models/board_game.dart';
-import '../services/game_service.dart';
-import '../config/app_theme.dart';
-import '../widgets/animations.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:lucide_icons/lucide_icons.dart';
+import '../../core/models/board_game.dart';
+import '../../core/services/game_service.dart';
+import '../../shared/config/app_theme.dart';
+import '../../shared/widgets/animations.dart';
 import 'ui/game_catalog_card.dart';
 
 class CatalogPage extends StatefulWidget {
@@ -82,16 +83,16 @@ class _CatalogPageState extends State<CatalogPage> {
 
   // Custom Header to match Collection Page style + Back Button + Search
   Widget _buildCatalogHeader() {
+    const Color headerBg = Color(0xFF171A21);
+    const Color borderColor = Color(0xFF2A3F5F);
+    const Color inputBg = Color(0xFF0E141B);
+    const Color grayText = Color(0xFF8F98A0);
+
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-      decoration: BoxDecoration(
-        color: AppColors.darkBgSecondary,
-        border: Border(
-          bottom: BorderSide(
-            color: AppColors.primary.withOpacity(0.3),
-            width: 1.0,
-          ),
-        ),
+      decoration: const BoxDecoration(
+        color: headerBg,
+        border: Border(bottom: BorderSide(color: borderColor, width: 1.0)),
       ),
       child: SafeArea(
         bottom: false,
@@ -105,7 +106,7 @@ class _CatalogPageState extends State<CatalogPage> {
                 children: [
                   IconButton(
                     onPressed: () => Navigator.pop(context),
-                    icon: Icon(Icons.arrow_back, color: AppColors.accent),
+                    icon: const Icon(Icons.arrow_back, color: Colors.white),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                     visualDensity: VisualDensity.compact,
@@ -113,8 +114,8 @@ class _CatalogPageState extends State<CatalogPage> {
                   const SizedBox(width: 12),
                   Text(
                     "Game Catalog",
-                    style: TextStyle(
-                      color: AppColors.accent,
+                    style: GoogleFonts.poppins(
+                      color: Colors.white,
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
                     ),
@@ -124,8 +125,8 @@ class _CatalogPageState extends State<CatalogPage> {
                   ElevatedButton(
                     onPressed: _addSelectedGames,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: AppColors.darkBg,
+                      backgroundColor: borderColor,
+                      foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16,
                         vertical: 8,
@@ -141,36 +142,50 @@ class _CatalogPageState extends State<CatalogPage> {
               ),
             ),
 
-            // Row 2: Search Bar
-            Container(
-              height: 40,
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+            // Row 2: Search Bar with Custom Styling
+            TextField(
+              controller: _searchController,
+              style: GoogleFonts.poppins(
+                color: Colors.white,
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
               ),
-              child: TextField(
-                controller: _searchController,
-                style: TextStyle(color: AppColors.textPrimary),
-                decoration: InputDecoration(
-                  hintText: "Search catalog...",
-                  hintStyle: TextStyle(
-                    color: AppColors.textTertiary.withOpacity(0.6),
-                    fontSize: 14,
-                  ),
-                  prefixIcon: Icon(
-                    LucideIcons.search,
-                    size: 16,
-                    color: AppColors.primary.withOpacity(0.6),
-                  ),
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(
-                    vertical: 8,
-                    horizontal: 8,
+              textAlign: TextAlign.center,
+              decoration: InputDecoration(
+                hintText: "Search catalog...",
+                hintStyle: GoogleFonts.poppins(
+                  color: grayText,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w400,
+                ),
+                prefixIcon: const Icon(
+                  LucideIcons.search,
+                  size: 16,
+                  color: grayText,
+                ),
+                filled: true,
+                fillColor: inputBg,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: borderColor, width: 1.5),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: borderColor, width: 1.5),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(
+                    color: Color(0xFF6366F1),
+                    width: 2.0,
                   ),
                 ),
-                textInputAction: TextInputAction.search,
+                contentPadding: const EdgeInsets.symmetric(
+                  vertical: 12,
+                  horizontal: 16,
+                ),
               ),
+              textInputAction: TextInputAction.search,
             ),
           ],
         ),
@@ -203,7 +218,7 @@ class _CatalogPageState extends State<CatalogPage> {
                       return Center(
                         child: Text(
                           'Error loading catalog: ${catalogSnapshot.error}',
-                          style: TextStyle(color: AppColors.error),
+                          style: const TextStyle(color: Colors.red),
                         ),
                       );
                     } else if (catalogSnapshot.hasData) {
@@ -226,54 +241,41 @@ class _CatalogPageState extends State<CatalogPage> {
                     }).toList();
 
                     if (filteredGames.isEmpty && _cachedGames != null) {
-                      return FadeInWidget(
-                        child: Center(
-                          child: Text(
-                            _searchQuery.isEmpty
-                                ? "You own every game in the catalog!"
-                                : "No games found matching '$_searchQuery'",
-                            style: AppTextStyles.bodyMedium,
-                          ),
+                      return Center(
+                        child: Text(
+                          _searchQuery.isEmpty
+                              ? "You own every game in the catalog!"
+                              : "No games found matching '$_searchQuery'",
+                          style: const TextStyle(color: Colors.white),
                         ),
                       );
                     }
 
-                    return FadeInWidget(
-                      child: GridView.builder(
-                        key: const PageStorageKey<String>('catalogGridView'),
-                        controller: _scrollController,
-                        padding: const EdgeInsets.all(AppSpacing.lg),
-                        physics: const BouncingScrollPhysics(),
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2,
-                              crossAxisSpacing: AppSpacing.lg,
-                              mainAxisSpacing: AppSpacing.lg,
-                              childAspectRatio: 0.7,
-                            ),
-                        itemCount: filteredGames.length,
-                        itemBuilder: (context, index) {
-                          final game = filteredGames[index];
-                          final isSelected = _selectedGameIds.contains(game.id);
+                    return GridView.builder(
+                      key: const PageStorageKey<String>('catalogGridView'),
+                      controller: _scrollController,
+                      padding: const EdgeInsets.all(16),
+                      physics: const BouncingScrollPhysics(),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            crossAxisSpacing: 16,
+                            mainAxisSpacing: 16,
+                            childAspectRatio: 0.7,
+                          ),
+                      itemCount: filteredGames.length,
+                      itemBuilder: (context, index) {
+                        final game = filteredGames[index];
+                        final isSelected = _selectedGameIds.contains(game.id);
 
-                          return SlideUpWidget(
-                            duration: AppAnimation.normal,
-                            initialOffset: 30.0,
-                            child: ScaleInWidget(
-                              duration: AppAnimation.normal,
-                              initialScale: 0.9,
-                              child: TapScaleButton(
-                                onTap: () => _toggleGameSelection(game),
-                                pressedScale: 0.97,
-                                child: GameCatalogCard(
-                                  game: game,
-                                  isSelected: isSelected,
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
+                        return GestureDetector(
+                          onTap: () => _toggleGameSelection(game),
+                          child: GameCatalogCard(
+                            game: game,
+                            isSelected: isSelected,
+                          ),
+                        );
+                      },
                     );
                   },
                 );

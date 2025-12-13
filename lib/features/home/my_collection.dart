@@ -1,12 +1,12 @@
-// lib/pages/my_collection.dart (UPDATED with Shimmer Skeletons)
+// lib/features/home/my_collection.dart (UPDATED with Shimmer Skeletons)
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:async';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:shimmer/shimmer.dart'; // 💡 NEW: For skeleton loading
-import '../services/game_service.dart';
-import '../models/board_game.dart';
-import '../shared/config/app_theme.dart';
+import '../../core/services/game_service.dart';
+import '../../core/models/board_game.dart';
+import '../../shared/config/app_theme.dart';
 import 'catalog_page.dart';
 import 'game_detail_page.dart';
 

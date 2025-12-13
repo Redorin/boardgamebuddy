@@ -1,12 +1,11 @@
-// lib/pages/player_finder.dart (FINAL: FIXES BLANK AVATAR CRASH)
+// lib/features/player_finder/player_finder.dart (FINAL: FIXES BLANK AVATAR CRASH)
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:shimmer/shimmer.dart';
-import '../services/profile_service.dart';
-import '../config/app_theme.dart';
-import 'read_only_profile_page.dart';
+import '../../core/services/profile_service.dart';
+import '../profile/read_only_profile_page.dart';
 
 // --- Data Models (Keep these classes in your file) ---
 class PlayerDisplay {
@@ -85,29 +84,29 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
   // 💡 NEW: Reusable widget for the default placeholder avatar
   Widget _buildDefaultAvatar() {
     return CircleAvatar(
-      backgroundColor: AppColors.primary,
+      backgroundColor: Colors.deepPurple.shade700,
       radius: 24,
-      child: Icon(Icons.person, color: AppColors.darkBg, size: 24),
+      child: const Icon(Icons.person, color: Colors.white, size: 24),
     );
   }
 
   Widget _buildSkeletonTile() {
     return Shimmer.fromColors(
-      baseColor: AppColors.surface,
-      highlightColor: AppColors.primary.withOpacity(0.3),
+      baseColor: const Color(0xFF171A21),
+      highlightColor: const Color(0xFF2A3F5F),
       child: Card(
         margin: const EdgeInsets.only(bottom: 10),
-        color: AppColors.surface,
+        color: Colors.white.withOpacity(0.05),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: ListTile(
-          leading: CircleAvatar(radius: 24, backgroundColor: AppColors.primary),
+        child: const ListTile(
+          leading: CircleAvatar(radius: 24, backgroundColor: Colors.black),
           title: Text(
             "Loading Player Name...",
-            style: TextStyle(color: AppColors.textPrimary),
+            style: TextStyle(color: Colors.black),
           ),
           subtitle: Text(
             "Loading genres...",
-            style: TextStyle(color: AppColors.textTertiary),
+            style: TextStyle(color: Colors.black),
           ),
         ),
       ),
@@ -130,22 +129,22 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
       label: Text(
         label,
         style: TextStyle(
-          color: isSelected ? AppColors.darkBg : AppColors.textPrimary,
+          color: isSelected ? Colors.white : const Color(0xFFC0C0C0),
         ),
       ),
       avatar: isSelected
-          ? Icon(LucideIcons.check, size: 16, color: AppColors.darkBg)
+          ? const Icon(LucideIcons.check, size: 16, color: Colors.white)
           : null,
       onPressed: onTap,
       backgroundColor: isSelected
-          ? AppColors.primary
-          : AppColors.surface.withOpacity(0.6),
+          ? const Color(0xFF673AB7)
+          : Colors.white.withOpacity(0.1),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
           color: isSelected
-              ? AppColors.accent
-              : AppColors.primary.withOpacity(0.3),
+              ? const Color(0xFF673AB7)
+              : Colors.white.withOpacity(0.2),
         ),
       ),
     );
@@ -164,7 +163,7 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
           return Center(
             child: Text(
               'Error loading friends: ${snapshot.error}',
-              style: TextStyle(color: AppColors.error),
+              style: const TextStyle(color: Colors.red),
             ),
           );
         }
@@ -175,10 +174,10 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
         print("DEBUG: Found ${friends.length} friends for current user.");
 
         if (friends.isEmpty) {
-          return Center(
+          return const Center(
             child: Text(
               "You haven't added any friends yet.",
-              style: TextStyle(color: AppColors.textTertiary),
+              style: TextStyle(color: Colors.white54),
             ),
           );
         }
@@ -345,42 +344,16 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
         children: [
           TextField(
             controller: _searchController,
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 15,
-              fontWeight: FontWeight.w500,
-            ),
-            textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.white),
             decoration: InputDecoration(
               hintText: 'Search players or genres...',
-              hintStyle: TextStyle(
-                color: AppColors.textTertiary.withOpacity(0.6),
-                fontSize: 14,
-                fontWeight: FontWeight.w400,
-              ),
-              prefixIcon: Icon(
-                LucideIcons.search,
-                color: AppColors.primary.withOpacity(0.6),
-              ),
+              hintStyle: const TextStyle(color: Colors.white54),
+              prefixIcon: const Icon(Icons.search, color: Colors.white54),
               filled: true,
-              fillColor: AppColors.surface,
+              fillColor: Colors.white.withOpacity(0.1),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(
-                  color: AppColors.primary.withOpacity(0.3),
-                  width: 1.5,
-                ),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(
-                  color: AppColors.primary.withOpacity(0.3),
-                  width: 1.5,
-                ),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: AppColors.accent, width: 2.0),
+                borderSide: BorderSide.none,
               ),
             ),
           ),
@@ -410,7 +383,7 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
                   return Center(
                     child: Text(
                       'Error: ${snapshot.error}',
-                      style: TextStyle(color: AppColors.error),
+                      style: const TextStyle(color: Colors.red),
                     ),
                   );
                 if (snapshot.connectionState == ConnectionState.waiting)
