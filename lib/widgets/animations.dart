@@ -8,8 +8,8 @@ class FadeInWidget extends StatefulWidget {
   const FadeInWidget({
     required this.child,
     this.duration = const Duration(milliseconds: 300),
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  });
 
   @override
   State<FadeInWidget> createState() => _FadeInWidgetState();
@@ -50,8 +50,8 @@ class SlideUpWidget extends StatefulWidget {
     required this.child,
     this.duration = const Duration(milliseconds: 300),
     this.initialOffset = 50,
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  });
 
   @override
   State<SlideUpWidget> createState() => _SlideUpWidgetState();
@@ -95,8 +95,8 @@ class ScaleInWidget extends StatefulWidget {
     required this.child,
     this.duration = const Duration(milliseconds: 300),
     this.initialScale = 0.8,
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  });
 
   @override
   State<ScaleInWidget> createState() => _ScaleInWidgetState();
@@ -140,8 +140,8 @@ class TapScaleButton extends StatefulWidget {
     required this.child,
     required this.onTap,
     this.pressedScale = 0.95,
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  });
 
   @override
   State<TapScaleButton> createState() => _TapScaleButtonState();

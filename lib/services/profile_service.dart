@@ -15,7 +15,7 @@ class ProfileService {
     return _db.collection('users').doc(userId);
   }
 
-  // 1. SAVE ONBOARDING DATA 
+  // 1. SAVE ONBOARDING DATA
   static Future<void> saveOnboardingData({
     required String username,
     required List<String> preferredGenres,
@@ -27,34 +27,34 @@ class ProfileService {
         'displayName': username,
         'preferredGenres': preferredGenres,
         'onboardingComplete': true,
-        'ownedGamesCount': 0, 
+        'ownedGamesCount': 0,
         'createdAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
     } catch (e) {
       print("Error saving onboarding data: $e");
     }
   }
-  
-  // 2. SAVE PROFILE EDITS 
+
+  // 2. SAVE PROFILE EDITS
   static Future<void> saveProfileEdits({
     required String displayName,
     required String aboutMe,
     required List<String> preferredGenres,
     required String topGenre,
-    required String profileImage, 
-    required List<Map<String, dynamic>> favoriteGames, 
+    required String profileImage,
+    required List<Map<String, dynamic>> favoriteGames,
   }) async {
     final userDocRef = _getUserDocRef();
     if (userDocRef == null) return;
 
     try {
-      await userDocRef.update({ 
+      await userDocRef.update({
         'displayName': displayName,
         'aboutMe': aboutMe,
         'preferredGenres': preferredGenres,
         'topGenre': topGenre,
         'profileImage': profileImage,
-        'favoriteGames': favoriteGames, 
+        'favoriteGames': favoriteGames,
         'updatedAt': FieldValue.serverTimestamp(),
       });
       print("Profile edits saved successfully.");
@@ -82,17 +82,18 @@ class ProfileService {
       return snapshot.exists ? (snapshot.data() ?? {}) : {};
     });
   }
-  
+
   // 3.5. STREAM PROFILE BY ID (For viewing other players)
   static Stream<Map<String, dynamic>> getProfileStreamById(String userId) {
-    if (userId == null) return Stream.value({});
     return _db.collection('users').doc(userId).snapshots().map((snapshot) {
       return snapshot.exists ? (snapshot.data() ?? {}) : {};
     });
   }
-  
+
   // 4. Fetch Multiple Profiles (Used for potential future friend list hydration)
-  static Future<Map<String, Map<String, dynamic>>> getProfilesByIds(List<String> profileIds) async {
+  static Future<Map<String, Map<String, dynamic>>> getProfilesByIds(
+    List<String> profileIds,
+  ) async {
     if (profileIds.isEmpty) return {};
     final profilesData = <String, Map<String, dynamic>>{};
     try {
@@ -136,11 +137,15 @@ class ProfileService {
     final senderDoc = await _db.collection('users').doc(senderId).get();
     final senderData = senderDoc.data();
     if (senderData == null) return;
-    
+
     final senderName = senderData['displayName'] as String? ?? 'Anonymous User';
     final senderImage = senderData['profileImage'] as String? ?? '';
 
-    final targetRequestRef = _db.collection('users').doc(targetId).collection('friendRequests').doc(senderId);
+    final targetRequestRef = _db
+        .collection('users')
+        .doc(targetId)
+        .collection('friendRequests')
+        .doc(senderId);
 
     try {
       await targetRequestRef.set({
@@ -159,16 +164,26 @@ class ProfileService {
     final senderId = _auth.currentUser?.uid;
     if (senderId == null || targetId.isEmpty) return Stream.value(false);
 
-    return _db.collection('users').doc(targetId).collection('friendRequests').doc(senderId).snapshots().map((snapshot) {
-      return snapshot.exists;
-    });
+    return _db
+        .collection('users')
+        .doc(targetId)
+        .collection('friendRequests')
+        .doc(senderId)
+        .snapshots()
+        .map((snapshot) {
+          return snapshot.exists;
+        });
   }
 
   // 💡 9. ACCEPT FRIEND REQUEST
-  static Future<void> acceptFriendRequest(String senderId, String senderName, String senderImage) async {
+  static Future<void> acceptFriendRequest(
+    String senderId,
+    String senderName,
+    String senderImage,
+  ) async {
     final currentUserId = _auth.currentUser?.uid;
     if (currentUserId == null) return;
-    
+
     final batch = _db.batch();
     final currentUserRef = _db.collection('users').doc(currentUserId);
     final senderUserRef = _db.collection('users').doc(senderId);
@@ -186,9 +201,10 @@ class ProfileService {
 
     // 3. ADD the current user (receiver) to the sender's 'friends' list
     final currentUserSnapshot = await currentUserRef.get();
-    final currentUserName = currentUserSnapshot.data()?['displayName'] ?? 'User';
+    final currentUserName =
+        currentUserSnapshot.data()?['displayName'] ?? 'User';
     final currentUserImage = currentUserSnapshot.data()?['profileImage'] ?? '';
-    
+
     batch.set(senderUserRef.collection('friends').doc(currentUserId), {
       'id': currentUserId,
       'displayName': currentUserName,
@@ -207,19 +223,21 @@ class ProfileService {
   static Future<void> removeFriend(String friendId) async {
     final userDocRef = _getUserDocRef();
     if (userDocRef == null) return;
-    
+
     final batch = _db.batch();
-    
+
     // 1. Attempt to delete from the current user's friendRequests (declining)
     batch.delete(userDocRef.collection('friendRequests').doc(friendId));
-    
+
     // 2. Attempt to delete from the current user's friends list (removing)
     batch.delete(userDocRef.collection('friends').doc(friendId));
 
     // 3. Attempt to delete myself from their friends list (removing from both sides)
     final otherUserRef = _db.collection('users').doc(friendId);
     // Note: Use a try-catch for the batch.commit if this specific line throws issues in Web
-    batch.delete(otherUserRef.collection('friends').doc(_auth.currentUser!.uid));
+    batch.delete(
+      otherUserRef.collection('friends').doc(_auth.currentUser!.uid),
+    );
 
     try {
       await batch.commit();
@@ -228,12 +246,11 @@ class ProfileService {
     }
   }
 
-
   // 💡 11. CHECK IF FRIEND (Used to toggle button on read-only profile)
   static Stream<bool> isFriend(String friendId) {
     final friendsRef = _getFriendsCollectionRef();
     if (friendsRef == null) return Stream.value(false);
-    
+
     return friendsRef.doc(friendId).snapshots().map((snapshot) {
       return snapshot.exists;
     });
@@ -243,25 +260,27 @@ class ProfileService {
   static Stream<List<Map<String, dynamic>>> getIncomingRequestsStream() {
     final userId = _auth.currentUser?.uid;
     if (userId == null) return Stream.value([]);
-    
-    return _db.collection('users').doc(userId).collection('friendRequests')
+
+    return _db
+        .collection('users')
+        .doc(userId)
+        .collection('friendRequests')
         .orderBy('sentAt', descending: true)
         .snapshots()
         .map((snapshot) {
-          return snapshot.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
+          return snapshot.docs.map((doc) => doc.data()).toList();
         });
   }
-  
+
   // 💡 13. GET FRIENDS LIST STREAM
   static Stream<List<Map<String, dynamic>>> getFriendsStream() {
     final friendsRef = _getFriendsCollectionRef();
     if (friendsRef == null) return Stream.value([]);
-    
-    return friendsRef
-        .orderBy('displayName')
-        .snapshots()
-        .map((snapshot) {
-          return snapshot.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
-        });
+
+    return friendsRef.orderBy('displayName').snapshots().map((snapshot) {
+      return snapshot.docs
+          .map((doc) => doc.data() as Map<String, dynamic>)
+          .toList();
+    });
   }
 }

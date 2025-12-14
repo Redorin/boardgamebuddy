@@ -12,11 +12,7 @@ class UsernameSetup extends StatefulWidget {
   final Function(String username) onNext;
   final VoidCallback onSkip;
 
-  const UsernameSetup({
-    Key? key,
-    required this.onNext,
-    required this.onSkip,
-  }) : super(key: key);
+  const UsernameSetup({super.key, required this.onNext, required this.onSkip});
 
   @override
   State<UsernameSetup> createState() => _UsernameSetupState();
@@ -152,7 +148,10 @@ class _UsernameSetupState extends State<UsernameSetup> {
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             gradient: const LinearGradient(
-                              colors: [Color(0xFF8B5CF6), Color(0xFF3B82F6)], // purple-500 to blue-500
+                              colors: [
+                                Color(0xFF8B5CF6),
+                                Color(0xFF3B82F6),
+                              ], // purple-500 to blue-500
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                             ),
@@ -164,7 +163,11 @@ class _UsernameSetupState extends State<UsernameSetup> {
                               ),
                             ],
                           ),
-                          child: const Icon(Icons.person_outline, color: Colors.white, size: 40),
+                          child: const Icon(
+                            Icons.person_outline,
+                            color: Colors.white,
+                            size: 40,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 24),
@@ -176,13 +179,19 @@ class _UsernameSetupState extends State<UsernameSetup> {
                             Text(
                               'Set Up Your Profile',
                               style: TextStyle(
-                                  fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF1F2937)), 
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF1F2937),
+                              ),
                             ),
                             SizedBox(height: 4),
                             Text(
                               'Choose a username to personalize your experience.',
                               textAlign: TextAlign.center,
-                              style: TextStyle(fontSize: 14, color: Color(0xFF4B5563)), 
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Color(0xFF4B5563),
+                              ),
                             ),
                           ],
                         ),
@@ -192,7 +201,10 @@ class _UsernameSetupState extends State<UsernameSetup> {
                       // Username Input
                       const Text(
                         'Username',
-                        style: TextStyle(fontWeight: FontWeight.w500, color: Color(0xFF374151)), 
+                        style: TextStyle(
+                          fontWeight: FontWeight.w500,
+                          color: Color(0xFF374151),
+                        ),
                       ),
                       const SizedBox(height: 8),
                       TextField(
@@ -207,8 +219,13 @@ class _UsernameSetupState extends State<UsernameSetup> {
                         maxLength: 20,
                         decoration: InputDecoration(
                           hintText: 'Enter your username',
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 0,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                           counterText: "",
                           errorText: _error,
                         ),
@@ -223,11 +240,21 @@ class _UsernameSetupState extends State<UsernameSetup> {
                         onPressed: _handleNext,
                         style: ElevatedButton.styleFrom(
                           minimumSize: const Size(double.infinity, 48),
-                          backgroundColor: const Color(0xFF9333EA), // purple-600
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          backgroundColor: const Color(
+                            0xFF9333EA,
+                          ), // purple-600
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          textStyle: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                        child: const Text('Next', style: TextStyle(color: Colors.white)),
+                        child: const Text(
+                          'Next',
+                          style: TextStyle(color: Colors.white),
+                        ),
                       ),
                       const SizedBox(height: 12),
 
@@ -271,18 +298,15 @@ class _UsernameSetupState extends State<UsernameSetup> {
 class GenreSetup extends StatefulWidget {
   final Function(List<String> genres) onComplete;
 
-  const GenreSetup({
-    Key? key,
-    required this.onComplete,
-  }) : super(key: key);
+  const GenreSetup({super.key, required this.onComplete});
 
   @override
   State<GenreSetup> createState() => _GenreSetupState();
 }
 
 class _GenreSetupState extends State<GenreSetup> {
-  List<String> _preferredGenres = [];
-  
+  final List<String> _preferredGenres = [];
+
   final List<String> _allGenres = const [
     'Strategy',
     'Engine Building',
@@ -337,7 +361,9 @@ class _GenreSetupState extends State<GenreSetup> {
           color: isSelected ? const Color(0xFF9333EA) : Colors.white,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isSelected ? const Color(0xFF9333EA) : const Color(0xFFE5E7EB),
+            color: isSelected
+                ? const Color(0xFF9333EA)
+                : const Color(0xFFE5E7EB),
             width: 1.5,
           ),
         ),
@@ -360,11 +386,7 @@ class _GenreSetupState extends State<GenreSetup> {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              Color(0xFFEFF6FF), 
-              Color(0xFFFAF5FF),
-              Color(0xFFFDF2F8),
-            ],
+            colors: [Color(0xFFEFF6FF), Color(0xFFFAF5FF), Color(0xFFFDF2F8)],
           ),
         ),
         child: Center(
@@ -396,7 +418,9 @@ class _GenreSetupState extends State<GenreSetup> {
                           child: Container(
                             height: 8,
                             decoration: BoxDecoration(
-                              color: const Color(0xFF9333EA), // purple-600 (Completed)
+                              color: const Color(
+                                0xFF9333EA,
+                              ), // purple-600 (Completed)
                               borderRadius: BorderRadius.circular(4),
                             ),
                           ),
@@ -406,7 +430,9 @@ class _GenreSetupState extends State<GenreSetup> {
                           child: Container(
                             height: 8,
                             decoration: BoxDecoration(
-                              color: const Color(0xFF9333EA), // purple-600 (Active)
+                              color: const Color(
+                                0xFF9333EA,
+                              ), // purple-600 (Active)
                               borderRadius: BorderRadius.circular(4),
                             ),
                           ),
@@ -435,7 +461,11 @@ class _GenreSetupState extends State<GenreSetup> {
                             ),
                           ],
                         ),
-                        child: const Icon(Icons.favorite_border, color: Colors.white, size: 40),
+                        child: const Icon(
+                          Icons.favorite_border,
+                          color: Colors.white,
+                          size: 40,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 24),
@@ -447,13 +477,19 @@ class _GenreSetupState extends State<GenreSetup> {
                           Text(
                             'Choose Your Genres',
                             style: TextStyle(
-                                fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF1F2937)),
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF1F2937),
+                            ),
                           ),
                           SizedBox(height: 4),
                           Text(
                             'Select up to 5 genres you enjoy most.',
                             textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: 14, color: Color(0xFF4B5563)),
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Color(0xFF4B5563),
+                            ),
                           ),
                         ],
                       ),
@@ -466,7 +502,7 @@ class _GenreSetupState extends State<GenreSetup> {
                       runSpacing: 8.0,
                       children: _allGenres.map(_buildGenreTag).toList(),
                     ),
-                    
+
                     const SizedBox(height: 32),
 
                     // Complete Button
@@ -475,10 +511,18 @@ class _GenreSetupState extends State<GenreSetup> {
                       style: ElevatedButton.styleFrom(
                         minimumSize: const Size(double.infinity, 48),
                         backgroundColor: const Color(0xFF9333EA),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        textStyle: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                      child: const Text('Finish Onboarding', style: TextStyle(color: Colors.white)),
+                      child: const Text(
+                        'Finish Onboarding',
+                        style: TextStyle(color: Colors.white),
+                      ),
                     ),
                   ],
                 ),
@@ -505,7 +549,7 @@ class _GenreSetupState extends State<GenreSetup> {
 // ----------------------------------------------------
 
 class OnboardingPage extends StatefulWidget {
-  const OnboardingPage({Key? key}) : super(key: key);
+  const OnboardingPage({super.key});
 
   @override
   State<OnboardingPage> createState() => _OnboardingPageState();
@@ -522,11 +566,12 @@ class _OnboardingPageState extends State<OnboardingPage> {
       _currentStep = 1;
     });
   }
-  
+
   // This function is called when the user finishes all steps
-  void _onOnboardingComplete(List<String> genres) async { // Added 'async'
+  void _onOnboardingComplete(List<String> genres) async {
+    // Added 'async'
     _tempGenres = genres;
-    
+
     // 💡 CORE: Call the service to save data to Firestore
     if (_tempUsername.isNotEmpty) {
       await ProfileService.saveOnboardingData(
@@ -534,24 +579,23 @@ class _OnboardingPageState extends State<OnboardingPage> {
         preferredGenres: _tempGenres,
       );
     }
-    
+
     // Redirect to HomePage (final destination)
     if (mounted) {
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(
           // Pass the new username to HomePage for display in the AppBar
-          builder: (context) => HomePage(_tempUsername), 
+          builder: (context) => HomePage(_tempUsername),
         ),
         (Route<dynamic> route) => false,
       );
     }
   }
-  
+
   // This function is called if the user skips Step 1
   void _onSkip() {
-    _onOnboardingComplete([]); 
+    _onOnboardingComplete([]);
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -559,15 +603,10 @@ class _OnboardingPageState extends State<OnboardingPage> {
       index: _currentStep,
       children: [
         // Step 1: Username Setup
-        UsernameSetup( 
-          onNext: _onUsernameSetupComplete,
-          onSkip: _onSkip,
-        ),
-        
+        UsernameSetup(onNext: _onUsernameSetupComplete, onSkip: _onSkip),
+
         // Step 2: Genre Setup
-        GenreSetup(
-          onComplete: _onOnboardingComplete,
-        ),
+        GenreSetup(onComplete: _onOnboardingComplete),
       ],
     );
   }

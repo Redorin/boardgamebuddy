@@ -8,8 +8,8 @@ class CatalogHeader extends StatelessWidget implements PreferredSizeWidget {
   const CatalogHeader({
     required this.selectedCount,
     required this.onAddSelected,
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  });
 
   @override
   Widget build(BuildContext context) {

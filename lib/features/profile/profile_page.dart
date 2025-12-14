@@ -101,10 +101,10 @@ class ProfilePage extends StatefulWidget {
   final Function(String) onDisplayNameUpdate;
 
   const ProfilePage({
-    Key? key,
+    super.key,
     required this.onLogout,
     required this.onDisplayNameUpdate,
-  }) : super(key: key);
+  });
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
@@ -939,8 +939,7 @@ class _ProfilePageState extends State<ProfilePage> {
 class AvatarSelectionDialog extends StatelessWidget {
   final Function(String) onAvatarSelected;
 
-  const AvatarSelectionDialog({Key? key, required this.onAvatarSelected})
-    : super(key: key);
+  const AvatarSelectionDialog({super.key, required this.onAvatarSelected});
 
   @override
   Widget build(BuildContext context) {
@@ -1004,10 +1003,10 @@ class GenreSelectionDialog extends StatefulWidget {
   final Function(List<String>) onGenresSelected;
 
   const GenreSelectionDialog({
-    Key? key,
+    super.key,
     required this.selectedGenres,
     required this.onGenresSelected,
-  }) : super(key: key);
+  });
 
   @override
   State<GenreSelectionDialog> createState() => _GenreSelectionDialogState();
@@ -1121,17 +1120,16 @@ class _GenreSelectionDialogState extends State<GenreSelectionDialog> {
   }
 }
 
-
 // [NEW WIDGET] Collection Game Selection Dialog
 class CollectionGameSelectionDialog extends StatefulWidget {
   final List<FavoriteGame> currentFavorites;
   final Function(List<FavoriteGame>) onFavoritesSelected;
 
   const CollectionGameSelectionDialog({
-    Key? key,
+    super.key,
     required this.currentFavorites,
     required this.onFavoritesSelected,
-  }) : super(key: key);
+  });
 
   @override
   State<CollectionGameSelectionDialog> createState() =>
@@ -1151,8 +1149,7 @@ class _CollectionGameSelectionDialogState
 
   void _toggleFavorite(BoardGame game) {
     setState(() {
-      final index =
-          _tempFavorites.indexWhere((fav) => fav.id == game.id);
+      final index = _tempFavorites.indexWhere((fav) => fav.id == game.id);
 
       if (index != -1) {
         // Game is already a favorite, so remove it
@@ -1246,7 +1243,9 @@ class _CollectionGameSelectionDialogState
                           isSelected
                               ? LucideIcons.checkCircle
                               : LucideIcons.circle,
-                          color: isSelected ? AppColors.primary : AppColors.textTertiary,
+                          color: isSelected
+                              ? AppColors.primary
+                              : AppColors.textTertiary,
                         ),
                       );
                     },

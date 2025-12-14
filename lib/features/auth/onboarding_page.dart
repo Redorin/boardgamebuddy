@@ -12,8 +12,7 @@ class UsernameSetup extends StatefulWidget {
   final Function(String username) onNext;
   final VoidCallback onSkip;
 
-  const UsernameSetup({Key? key, required this.onNext, required this.onSkip})
-    : super(key: key);
+  const UsernameSetup({super.key, required this.onNext, required this.onSkip});
 
   @override
   State<UsernameSetup> createState() => _UsernameSetupState();
@@ -299,14 +298,14 @@ class _UsernameSetupState extends State<UsernameSetup> {
 class GenreSetup extends StatefulWidget {
   final Function(List<String> genres) onComplete;
 
-  const GenreSetup({Key? key, required this.onComplete}) : super(key: key);
+  const GenreSetup({super.key, required this.onComplete});
 
   @override
   State<GenreSetup> createState() => _GenreSetupState();
 }
 
 class _GenreSetupState extends State<GenreSetup> {
-  List<String> _preferredGenres = [];
+  final List<String> _preferredGenres = [];
 
   final List<String> _allGenres = const [
     'Strategy',
@@ -550,7 +549,7 @@ class _GenreSetupState extends State<GenreSetup> {
 // ----------------------------------------------------
 
 class OnboardingPage extends StatefulWidget {
-  const OnboardingPage({Key? key}) : super(key: key);
+  const OnboardingPage({super.key});
 
   @override
   State<OnboardingPage> createState() => _OnboardingPageState();

@@ -14,7 +14,7 @@ import 'ui/game_detail_drawer.dart';
 
 class HomePage extends StatefulWidget {
   final String initialUsername;
-  const HomePage(this.initialUsername, {Key? key}) : super(key: key);
+  const HomePage(this.initialUsername, {super.key});
 
   @override
   State<HomePage> createState() => _HomePageState();

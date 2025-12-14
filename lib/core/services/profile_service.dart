@@ -264,9 +264,7 @@ class ProfileService {
         .orderBy('sentAt', descending: true)
         .snapshots()
         .map((snapshot) {
-          return snapshot.docs
-              .map((doc) => doc.data() as Map<String, dynamic>)
-              .toList();
+          return snapshot.docs.map((doc) => doc.data()).toList();
         });
   }
 

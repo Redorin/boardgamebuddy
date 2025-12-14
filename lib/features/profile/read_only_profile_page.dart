@@ -6,7 +6,7 @@ import 'profile_page.dart'; // Import models
 
 class ReadOnlyProfilePage extends StatefulWidget {
   final String userId;
-  const ReadOnlyProfilePage({Key? key, required this.userId}) : super(key: key);
+  const ReadOnlyProfilePage({super.key, required this.userId});
 
   @override
   State<ReadOnlyProfilePage> createState() => _ReadOnlyProfilePageState();
@@ -103,12 +103,13 @@ class _ReadOnlyProfilePageState extends State<ReadOnlyProfilePage> {
                         child: ElevatedButton.icon(
                           onPressed: () async {
                             await ProfileService.removeFriend(widget.userId);
-                            if (mounted)
+                            if (mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
                                   content: Text("Friend removed."),
                                 ),
                               );
+                            }
                           },
                           icon: const Icon(
                             Icons.person_remove,
@@ -141,7 +142,7 @@ class _ReadOnlyProfilePageState extends State<ReadOnlyProfilePage> {
                                     await ProfileService.sendFriendRequest(
                                       widget.userId,
                                     );
-                                    if (mounted)
+                                    if (mounted) {
                                       ScaffoldMessenger.of(
                                         context,
                                       ).showSnackBar(
@@ -150,6 +151,7 @@ class _ReadOnlyProfilePageState extends State<ReadOnlyProfilePage> {
                                           backgroundColor: Colors.deepPurple,
                                         ),
                                       );
+                                    }
                                   },
                             icon: Icon(
                               isRequestPending ? Icons.check : Icons.person_add,

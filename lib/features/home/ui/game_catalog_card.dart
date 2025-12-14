@@ -10,8 +10,8 @@ class GameCatalogCard extends StatelessWidget {
   const GameCatalogCard({
     required this.game,
     required this.isSelected,
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  });
 
   @override
   Widget build(BuildContext context) {

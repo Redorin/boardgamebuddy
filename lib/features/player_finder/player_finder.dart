@@ -31,7 +31,7 @@ class PlayerDisplay {
 enum SortOption { active, games }
 
 class PlayerFinderPage extends StatefulWidget {
-  const PlayerFinderPage({Key? key}) : super(key: key);
+  const PlayerFinderPage({super.key});
 
   @override
   State<PlayerFinderPage> createState() => _PlayerFinderPageState();
@@ -39,7 +39,6 @@ class PlayerFinderPage extends StatefulWidget {
 
 class _PlayerFinderPageState extends State<PlayerFinderPage> {
   String _searchQuery = '';
-  SortOption _sortBy = SortOption.active;
   bool _showOnlineOnly = false;
 
   final TextEditingController _searchController = TextEditingController();
@@ -245,17 +244,19 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
     return StreamBuilder<List<Map<String, dynamic>>>(
       stream: ProfileService.getIncomingRequestsStream(),
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting)
+        if (snapshot.connectionState == ConnectionState.waiting) {
           return _buildSkeletonList();
+        }
 
         final requests = snapshot.data ?? [];
-        if (requests.isEmpty)
+        if (requests.isEmpty) {
           return const Center(
             child: Text(
               "No incoming friend requests.",
               style: TextStyle(color: Colors.white54),
             ),
           );
+        }
 
         return ListView.builder(
           itemCount: requests.length,
@@ -305,19 +306,20 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
                           senderName,
                           senderImage,
                         );
-                        if (mounted)
+                        if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text("$senderName is now your friend!"),
                             ),
                           );
+                        }
                       },
                     ),
                     IconButton(
                       icon: const Icon(Icons.close, color: Colors.red),
                       onPressed: () async {
                         await ProfileService.removeFriend(senderId);
-                        if (mounted)
+                        if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text(
@@ -325,6 +327,7 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
                               ),
                             ),
                           );
+                        }
                       },
                     ),
                   ],
@@ -379,15 +382,17 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
                   .collection('users')
                   .snapshots(),
               builder: (context, snapshot) {
-                if (snapshot.hasError)
+                if (snapshot.hasError) {
                   return Center(
                     child: Text(
                       'Error: ${snapshot.error}',
                       style: const TextStyle(color: Colors.red),
                     ),
                   );
-                if (snapshot.connectionState == ConnectionState.waiting)
+                }
+                if (snapshot.connectionState == ConnectionState.waiting) {
                   return _buildSkeletonList();
+                }
 
                 var players = snapshot.data!.docs
                     .map(_mapDocumentToPlayer)
@@ -409,13 +414,14 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
                   players = players.where((p) => p.isOnline).toList();
                 }
 
-                if (players.isEmpty)
+                if (players.isEmpty) {
                   return const Center(
                     child: Text(
                       "No players found.",
                       style: TextStyle(color: Colors.white54),
                     ),
                   );
+                }
 
                 return ListView.builder(
                   itemCount: players.length,
@@ -505,7 +511,7 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
           ),
         ),
         subtitle: Text(
-          "${player.preferredGenres.take(2).join(", ")}",
+          player.preferredGenres.take(2).join(", "),
           style: const TextStyle(color: Colors.white54, fontSize: 12),
         ),
         trailing: const Icon(Icons.chevron_right, color: Colors.white54),

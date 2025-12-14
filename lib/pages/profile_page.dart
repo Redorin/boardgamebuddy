@@ -107,10 +107,10 @@ class ProfilePage extends StatefulWidget {
   final Function(String) onDisplayNameUpdate;
 
   const ProfilePage({
-    Key? key,
+    super.key,
     required this.onLogout,
     required this.onDisplayNameUpdate, // 💡 REQUIRED
-  }) : super(key: key);
+  });
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
@@ -557,10 +557,7 @@ class _ProfilePageState extends State<ProfilePage> {
                           onTap: () => _removeGenre(genre),
                           borderRadius: BorderRadius.circular(10),
                           child: const Padding(
-                            padding: const EdgeInsets.only(
-                              left: 8.0,
-                              right: 4.0,
-                            ),
+                            padding: EdgeInsets.only(left: 8.0, right: 4.0),
                             child: Icon(
                               Icons.close,
                               size: 16,
@@ -898,10 +895,10 @@ class ManageFavoritesDialog extends StatefulWidget {
   final List<FavoriteGame> currentFavorites;
   final Function(List<FavoriteGame>) onSelectionChanged;
   const ManageFavoritesDialog({
-    Key? key,
+    super.key,
     required this.currentFavorites,
     required this.onSelectionChanged,
-  }) : super(key: key);
+  });
   @override
   State<ManageFavoritesDialog> createState() => _ManageFavoritesDialogState();
 }
@@ -949,15 +946,16 @@ class _ManageFavoritesDialogState extends State<ManageFavoritesDialog> {
                         onChanged: (bool? value) {
                           setState(() {
                             if (value == true) {
-                              if (_selectedIds.length < 5)
+                              if (_selectedIds.length < 5) {
                                 _selectedIds.add(game.id);
-                              else
+                              } else {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
                                     content: Text("Max 5 games allowed"),
                                     duration: Duration(milliseconds: 500),
                                   ),
                                 );
+                              }
                             } else {
                               _selectedIds.remove(game.id);
                             }
@@ -1016,7 +1014,7 @@ class _ManageFavoritesDialogState extends State<ManageFavoritesDialog> {
 // --- GameCard (Unchanged) ---
 class GameCard extends StatelessWidget {
   final FavoriteGame game;
-  const GameCard({Key? key, required this.game}) : super(key: key);
+  const GameCard({super.key, required this.game});
   @override
   Widget build(BuildContext context) {
     return SizedBox(
@@ -1119,10 +1117,10 @@ class GenreSelectionDialog extends StatefulWidget {
   final List<String> allGenres;
 
   const GenreSelectionDialog({
-    Key? key,
+    super.key,
     required this.currentGenres,
     required this.allGenres,
-  }) : super(key: key);
+  });
 
   @override
   State<GenreSelectionDialog> createState() => _GenreSelectionDialogState();

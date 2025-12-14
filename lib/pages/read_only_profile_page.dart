@@ -1,25 +1,34 @@
 // lib/pages/read_only_profile_page.dart (FINAL: FRIEND REQUESTS)
 import 'package:flutter/material.dart';
 import '../utils/avatar_urls.dart';
-import '../services/profile_service.dart'; 
+import '../services/profile_service.dart';
 import 'profile_page.dart'; // Import models (assuming UserProfile and FavoriteGame models are defined here)
 
 class ReadOnlyProfilePage extends StatefulWidget {
-  final String userId; 
-  const ReadOnlyProfilePage({Key? key, required this.userId}) : super(key: key);
+  final String userId;
+  const ReadOnlyProfilePage({super.key, required this.userId});
 
   @override
   State<ReadOnlyProfilePage> createState() => _ReadOnlyProfilePageState();
 }
 
 class _ReadOnlyProfilePageState extends State<ReadOnlyProfilePage> {
-
   UserProfile _mapDataToProfile(Map<String, dynamic>? data) {
     if (data == null || data.isEmpty) {
-      return UserProfile(displayName: 'Unknown User', profileImage: AVATAR_URLS.first, aboutMe: "No bio available.", preferredGenres: [], topGenre: 'N/A', ownedGamesCount: 0, favoriteGames: []);
+      return UserProfile(
+        displayName: 'Unknown User',
+        profileImage: AVATAR_URLS.first,
+        aboutMe: "No bio available.",
+        preferredGenres: [],
+        topGenre: 'N/A',
+        ownedGamesCount: 0,
+        favoriteGames: [],
+      );
     }
-    
-    final List<String> genres = (data['preferredGenres'] as List?)?.map((e) => e.toString()).toList() ?? [];
+
+    final List<String> genres =
+        (data['preferredGenres'] as List?)?.map((e) => e.toString()).toList() ??
+        [];
     final int gamesCount = (data['ownedGamesCount'] as num?)?.toInt() ?? 0;
     String savedImageUrl = data['profileImage'] as String? ?? AVATAR_URLS.first;
 
@@ -33,7 +42,7 @@ class _ReadOnlyProfilePageState extends State<ReadOnlyProfilePage> {
 
     return UserProfile(
       displayName: data['displayName'] as String? ?? 'Unknown User',
-      profileImage: savedImageUrl, 
+      profileImage: savedImageUrl,
       aboutMe: data['aboutMe'] as String? ?? 'No bio available.',
       preferredGenres: genres,
       topGenre: data['topGenre'] as String? ?? 'N/A',
@@ -44,11 +53,14 @@ class _ReadOnlyProfilePageState extends State<ReadOnlyProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<Map<String, dynamic>>( 
+    return StreamBuilder<Map<String, dynamic>>(
       stream: ProfileService.getProfileStreamById(widget.userId),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(backgroundColor: Color(0xff0E141B), body: Center(child: CircularProgressIndicator()));
+          return const Scaffold(
+            backgroundColor: Color(0xff0E141B),
+            body: Center(child: CircularProgressIndicator()),
+          );
         }
 
         final UserProfile profile = _mapDataToProfile(snapshot.data);
@@ -56,7 +68,7 @@ class _ReadOnlyProfilePageState extends State<ReadOnlyProfilePage> {
         return Scaffold(
           backgroundColor: const Color(0xff0E141B),
           appBar: AppBar(
-            title: Text(profile.displayName), 
+            title: Text(profile.displayName),
             backgroundColor: const Color(0xFF171A21),
             foregroundColor: Colors.white,
           ),
@@ -64,12 +76,22 @@ class _ReadOnlyProfilePageState extends State<ReadOnlyProfilePage> {
             padding: const EdgeInsets.all(24.0),
             child: Column(
               children: [
-                CircleAvatar(radius: 60, backgroundImage: NetworkImage(profile.profileImage)),
+                CircleAvatar(
+                  radius: 60,
+                  backgroundImage: NetworkImage(profile.profileImage),
+                ),
                 const SizedBox(height: 16),
-                Text(profile.displayName, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white)),
-                
+                Text(
+                  profile.displayName,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+
                 const SizedBox(height: 24),
-                
+
                 // FRIEND ACTION BUTTON LOGIC
                 StreamBuilder<bool>(
                   stream: ProfileService.isFriend(widget.userId),
@@ -82,50 +104,89 @@ class _ReadOnlyProfilePageState extends State<ReadOnlyProfilePage> {
                         child: ElevatedButton.icon(
                           onPressed: () async {
                             // 💡 CALLS THE DEFINED METHOD
-                            await ProfileService.removeFriend(widget.userId); 
-                            if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Friend removed.")));
+                            await ProfileService.removeFriend(widget.userId);
+                            if (mounted)
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text("Friend removed."),
+                                ),
+                              );
                           },
-                          icon: const Icon(Icons.person_remove, color: Colors.white),
-                          label: const Text("Remove Friend", style: TextStyle(color: Colors.white)),
-                          style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, padding: const EdgeInsets.symmetric(vertical: 16)),
+                          icon: const Icon(
+                            Icons.person_remove,
+                            color: Colors.white,
+                          ),
+                          label: const Text(
+                            "Remove Friend",
+                            style: TextStyle(color: Colors.white),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.redAccent,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                          ),
                         ),
                       );
                     }
-                    
+
                     // If not friends, check if a request is already sent
                     return StreamBuilder<bool>(
                       stream: ProfileService.isRequestSent(widget.userId),
                       builder: (context, requestSnapshot) {
                         final isRequestPending = requestSnapshot.data ?? false;
-                        
+
                         return SizedBox(
                           width: double.infinity,
                           child: ElevatedButton.icon(
-                            onPressed: isRequestPending ? null : () async {
-                              // 🛑 FIX: Removed incorrect fetching of profile.displayName and profile.profileImage
-                              // The service now fetches the CURRENT authenticated user's details directly.
-                              await ProfileService.sendFriendRequest(widget.userId);
-                              if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Friend request sent!"), backgroundColor: Colors.deepPurple));
-                            },
-                            icon: Icon(isRequestPending ? Icons.check : Icons.person_add, color: Colors.white),
-                            label: Text(isRequestPending ? "Request Sent" : "Send Friend Request", style: const TextStyle(color: Colors.white)),
+                            onPressed: isRequestPending
+                                ? null
+                                : () async {
+                                    // 🛑 FIX: Removed incorrect fetching of profile.displayName and profile.profileImage
+                                    // The service now fetches the CURRENT authenticated user's details directly.
+                                    await ProfileService.sendFriendRequest(
+                                      widget.userId,
+                                    );
+                                    if (mounted)
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text("Friend request sent!"),
+                                          backgroundColor: Colors.deepPurple,
+                                        ),
+                                      );
+                                  },
+                            icon: Icon(
+                              isRequestPending ? Icons.check : Icons.person_add,
+                              color: Colors.white,
+                            ),
+                            label: Text(
+                              isRequestPending
+                                  ? "Request Sent"
+                                  : "Send Friend Request",
+                              style: const TextStyle(color: Colors.white),
+                            ),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: isRequestPending ? Colors.blueGrey : Colors.deepPurple,
+                              backgroundColor: isRequestPending
+                                  ? Colors.blueGrey
+                                  : Colors.deepPurple,
                               padding: const EdgeInsets.symmetric(vertical: 16),
                             ),
                           ),
                         );
                       },
                     );
-                  }
+                  },
                 ),
-                
+
                 const SizedBox(height: 24),
-                
+
                 // Stats Card
                 Container(
                   padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(color: const Color(0xFF171A21), borderRadius: BorderRadius.circular(12)),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF171A21),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
@@ -134,33 +195,68 @@ class _ReadOnlyProfilePageState extends State<ReadOnlyProfilePage> {
                     ],
                   ),
                 ),
-                
+
                 const SizedBox(height: 24),
                 // About Me
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(color: const Color(0xFF171A21), borderRadius: BorderRadius.circular(12)),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF171A21),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text("About Me", style: TextStyle(color: Colors.blueAccent, fontWeight: FontWeight.bold)),
+                      const Text(
+                        "About Me",
+                        style: TextStyle(
+                          color: Colors.blueAccent,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                       const SizedBox(height: 8),
-                      Text(profile.aboutMe, style: const TextStyle(color: Colors.white70)),
+                      Text(
+                        profile.aboutMe,
+                        style: const TextStyle(color: Colors.white70),
+                      ),
                     ],
                   ),
                 ),
-                
-                 if (profile.favoriteGames.isNotEmpty) ...[
-                    const SizedBox(height: 24),
-                    const Align(alignment: Alignment.centerLeft, child: Text("Top Favorites", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold))),
-                    const SizedBox(height: 12),
-                    SizedBox(height: 120, child: ListView.builder(scrollDirection: Axis.horizontal, itemCount: profile.favoriteGames.length, itemBuilder: (context, index) {
-                          final game = profile.favoriteGames[index];
-                          return Container(margin: const EdgeInsets.only(right: 12), width: 90, child: ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.network(game.image, fit: BoxFit.cover)));
-                        })
+
+                if (profile.favoriteGames.isNotEmpty) ...[
+                  const SizedBox(height: 24),
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      "Top Favorites",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                 ]
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    height: 120,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: profile.favoriteGames.length,
+                      itemBuilder: (context, index) {
+                        final game = profile.favoriteGames[index];
+                        return Container(
+                          margin: const EdgeInsets.only(right: 12),
+                          width: 90,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.network(game.image, fit: BoxFit.cover),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -168,12 +264,22 @@ class _ReadOnlyProfilePageState extends State<ReadOnlyProfilePage> {
       },
     );
   }
-  
+
   Widget _buildStatColumn(String label, String value) {
     return Column(
       children: [
-        Text(value, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-        Text(label, style: const TextStyle(color: Colors.white54, fontSize: 12)),
+        Text(
+          value,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        Text(
+          label,
+          style: const TextStyle(color: Colors.white54, fontSize: 12),
+        ),
       ],
     );
   }

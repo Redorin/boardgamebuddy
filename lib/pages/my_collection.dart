@@ -348,16 +348,18 @@ class _MyCollectionPageState extends State<MyCollectionPage> {
       stream: GameService.getUserCollectionGames(),
       builder: (context, snapshot) {
         // 🛑 NEW: Show the skeleton view while loading
-        if (snapshot.connectionState == ConnectionState.waiting)
+        if (snapshot.connectionState == ConnectionState.waiting) {
           return _buildSkeletonView();
+        }
 
-        if (snapshot.hasError)
+        if (snapshot.hasError) {
           return Center(
             child: Text(
               'Error: ${snapshot.error}',
               style: GoogleFonts.poppins(color: Colors.red),
             ),
           );
+        }
 
         final games = snapshot.data ?? [];
         var filteredGames = games.where((game) {

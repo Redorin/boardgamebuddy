@@ -9,7 +9,7 @@ import '../widgets/animations.dart';
 import 'ui/game_catalog_card.dart';
 
 class CatalogPage extends StatefulWidget {
-  const CatalogPage({Key? key}) : super(key: key);
+  const CatalogPage({super.key});
 
   @override
   State<CatalogPage> createState() => _CatalogPageState();
@@ -17,7 +17,7 @@ class CatalogPage extends StatefulWidget {
 
 class _CatalogPageState extends State<CatalogPage> {
   // Stores the IDs of selected games
-  Set<String> _selectedGameIds = {};
+  final Set<String> _selectedGameIds = {};
   late ScrollController _scrollController;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
