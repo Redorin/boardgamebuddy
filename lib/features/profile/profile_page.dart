@@ -1,10 +1,13 @@
-// lib/features/profile/profile_page.dart (FINAL, UPDATED FOR USERNAME SYNC)
+// lib/features/profile/profile_page.dart (FINAL, UPDATED FOR USERNAME SYNC & FAVORITES FIX)
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../shared/utils/avatar_urls.dart'; // Retained for AVATAR_URLS constant
 import '../../shared/config/app_theme.dart';
 import '../../core/services/profile_service.dart';
+// [FIXES: ADDED IMPORTS]
+import '../../core/services/game_service.dart';
+import '../../core/models/board_game.dart';
 
 // --- Data Models (Ensure these match your file's structure) ---
 
@@ -219,125 +222,20 @@ class _ProfilePageState extends State<ProfilePage> {
     });
   }
 
+  // [FIXED] Replaced manual input dialog with collection-based selection dialog
   void _showAddGameDialog() {
-    final TextEditingController gameNameController = TextEditingController();
-    final TextEditingController gameImageController = TextEditingController();
-
     showDialog(
       context: context,
-      builder: (context) => Dialog(
-        backgroundColor: AppColors.darkBgSecondary,
-        child: Container(
-          padding: const EdgeInsets.all(24),
-          constraints: const BoxConstraints(maxWidth: 400),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Add Favorite Game',
-                style: GoogleFonts.poppins(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 24),
-              TextField(
-                controller: gameNameController,
-                style: TextStyle(color: AppColors.textPrimary),
-                decoration: InputDecoration(
-                  hintText: 'Game name',
-                  hintStyle: TextStyle(color: AppColors.textTertiary),
-                  filled: true,
-                  fillColor: AppColors.surface,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(
-                      color: AppColors.primary.withOpacity(0.2),
-                    ),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(
-                      color: AppColors.primary.withOpacity(0.2),
-                    ),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: AppColors.primary, width: 2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: gameImageController,
-                style: TextStyle(color: AppColors.textPrimary),
-                decoration: InputDecoration(
-                  hintText: 'Image URL',
-                  hintStyle: TextStyle(color: AppColors.textTertiary),
-                  filled: true,
-                  fillColor: AppColors.surface,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(
-                      color: AppColors.primary.withOpacity(0.2),
-                    ),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(
-                      color: AppColors.primary.withOpacity(0.2),
-                    ),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: AppColors.primary, width: 2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: Text(
-                      'Cancel',
-                      style: TextStyle(color: AppColors.textSecondary),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  ElevatedButton(
-                    onPressed: () {
-                      if (gameNameController.text.trim().isNotEmpty) {
-                        setState(() {
-                          _editedProfile.favoriteGames.add(
-                            FavoriteGame(
-                              id: DateTime.now().millisecondsSinceEpoch
-                                  .toString(),
-                              name: gameNameController.text.trim(),
-                              image: gameImageController.text.trim().isNotEmpty
-                                  ? gameImageController.text.trim()
-                                  : 'https://via.placeholder.com/300',
-                            ),
-                          );
-                        });
-                        Navigator.pop(context);
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                    ),
-                    child: Text(
-                      'Add',
-                      style: TextStyle(color: AppColors.textPrimary),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
+      builder: (context) => CollectionGameSelectionDialog(
+        currentFavorites: _editedProfile.favoriteGames,
+        onFavoritesSelected: (newFavorites) {
+          setState(() {
+            _editedProfile = _editedProfile.copyWith(
+              favoriteGames: newFavorites,
+            );
+          });
+          Navigator.pop(context); // Pop the dialog after selection
+        },
       ),
     );
   }
@@ -859,7 +757,8 @@ class _ProfilePageState extends State<ProfilePage> {
                 const SizedBox(height: 20),
 
                 // Favorite Games Card
-                if (!_isEditing || _editedProfile.favoriteGames.isNotEmpty)
+                // [FIXED CONDITION]: Show card if editing OR if there are games to display (non-editing view).
+                if (_isEditing || currentProfile.favoriteGames.isNotEmpty)
                   Container(
                     padding: const EdgeInsets.all(20.0),
                     decoration: BoxDecoration(
@@ -1210,6 +1109,174 @@ class _GenreSelectionDialogState extends State<GenreSelectionDialog> {
                   ),
                   child: Text(
                     'Save',
+                    style: TextStyle(color: AppColors.textPrimary),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+
+// [NEW WIDGET] Collection Game Selection Dialog
+class CollectionGameSelectionDialog extends StatefulWidget {
+  final List<FavoriteGame> currentFavorites;
+  final Function(List<FavoriteGame>) onFavoritesSelected;
+
+  const CollectionGameSelectionDialog({
+    Key? key,
+    required this.currentFavorites,
+    required this.onFavoritesSelected,
+  }) : super(key: key);
+
+  @override
+  State<CollectionGameSelectionDialog> createState() =>
+      _CollectionGameSelectionDialogState();
+}
+
+class _CollectionGameSelectionDialogState
+    extends State<CollectionGameSelectionDialog> {
+  late List<FavoriteGame> _tempFavorites;
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize temporary list from current favorites for local mutation
+    _tempFavorites = List.from(widget.currentFavorites);
+  }
+
+  void _toggleFavorite(BoardGame game) {
+    setState(() {
+      final index =
+          _tempFavorites.indexWhere((fav) => fav.id == game.id);
+
+      if (index != -1) {
+        // Game is already a favorite, so remove it
+        _tempFavorites.removeAt(index);
+      } else {
+        // Game is not a favorite, so add it
+        _tempFavorites.add(
+          FavoriteGame(
+            id: game.id,
+            name: game.name,
+            image: game.thumbnailUrl, // Use BoardGame's thumbnailUrl as image
+          ),
+        );
+      }
+    });
+  }
+
+  bool _isGameSelected(String gameId) {
+    return _tempFavorites.any((fav) => fav.id == gameId);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: AppColors.darkBgSecondary,
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        constraints: const BoxConstraints(maxWidth: 500, maxHeight: 600),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Select Favorite Games',
+              style: GoogleFonts.poppins(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 20),
+            Expanded(
+              child: StreamBuilder<List<BoardGame>>(
+                // Fetch the user's collection to populate the dialog
+                stream: GameService.getUserCollectionGames(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (snapshot.hasError) {
+                    return Center(
+                      child: Text(
+                        'Error loading collection: ${snapshot.error}',
+                        style: TextStyle(color: AppColors.error),
+                      ),
+                    );
+                  }
+                  final games = snapshot.data ?? [];
+                  if (games.isEmpty) {
+                    return Center(
+                      child: Text(
+                        'Your collection is empty. Add games first!',
+                        style: TextStyle(color: AppColors.textTertiary),
+                      ),
+                    );
+                  }
+
+                  return ListView.builder(
+                    itemCount: games.length,
+                    itemBuilder: (context, index) {
+                      final game = games[index];
+                      final isSelected = _isGameSelected(game.id);
+
+                      return ListTile(
+                        onTap: () => _toggleFavorite(game),
+                        leading: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.network(
+                            game.thumbnailUrl.isEmpty
+                                ? 'https://via.placeholder.com/60'
+                                : game.thumbnailUrl,
+                            width: 50,
+                            height: 50,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                        title: Text(
+                          game.name,
+                          style: TextStyle(color: AppColors.textPrimary),
+                        ),
+                        trailing: Icon(
+                          isSelected
+                              ? LucideIcons.checkCircle
+                              : LucideIcons.circle,
+                          color: isSelected ? AppColors.primary : AppColors.textTertiary,
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text(
+                    'Cancel',
+                    style: TextStyle(color: AppColors.textTertiary),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                ElevatedButton(
+                  onPressed: () {
+                    // Pass the new list of favorites back to the parent widget
+                    widget.onFavoritesSelected(_tempFavorites);
+                    // The parent widget will call Navigator.pop(context)
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                  ),
+                  child: Text(
+                    'Save Favorites (${_tempFavorites.length})',
                     style: TextStyle(color: AppColors.textPrimary),
                   ),
                 ),
