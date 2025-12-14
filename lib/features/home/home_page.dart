@@ -282,92 +282,95 @@ class _DiscoverPageState extends State<DiscoverPage> {
 
               // The Circular/3D Gallery (Primary Content)
               Center(
-              child: SizedBox(
-                height: 500,
-                child: PageView.builder(
-                  controller: _pageController,
-                  physics: const BouncingScrollPhysics(),
-                  itemCount: virtualItemCount,
-                  itemBuilder: (context, index) {
-                    final gameIndex = index % games.length;
-                    final game = games[gameIndex];
+                child: SizedBox(
+                  height: 500,
+                  child: PageView.builder(
+                    controller: _pageController,
+                    physics: const BouncingScrollPhysics(),
+                    itemCount: virtualItemCount,
+                    itemBuilder: (context, index) {
+                      final gameIndex = index % games.length;
+                      final game = games[gameIndex];
 
-                    // Use AnimatedBuilder so the card rebuilds as the PageController's
-                    // page value changes (smooth transform during scroll/animation).
-                    return AnimatedBuilder(
-                      animation: _pageController,
-                      builder: (context, child) {
-                        final double page =
-                            (_pageController.hasClients &&
-                                _pageController.page != null)
-                            ? _pageController.page!
-                            : _pageController.initialPage.toDouble();
+                      // Use AnimatedBuilder so the card rebuilds as the PageController's
+                      // page value changes (smooth transform during scroll/animation).
+                      return AnimatedBuilder(
+                        animation: _pageController,
+                        builder: (context, child) {
+                          final double page =
+                              (_pageController.hasClients &&
+                                  _pageController.page != null)
+                              ? _pageController.page!
+                              : _pageController.initialPage.toDouble();
 
-                        final double pageDelta = page - index;
-                        final double distortion = (1 - (pageDelta.abs() * 0.3))
-                            .clamp(0.0, 1.0);
-                        final double rotation = pageDelta * -0.2;
+                          final double pageDelta = page - index;
+                          final double distortion =
+                              (1 - (pageDelta.abs() * 0.3)).clamp(0.0, 1.0);
+                          final double rotation = pageDelta * -0.2;
 
-                        return Transform(
-                          transform: Matrix4.identity()
-                            ..setEntry(3, 2, 0.001)
-                            ..rotateY(rotation)
-                            ..scale(distortion),
-                          alignment: Alignment.center,
-                          child: child,
-                        );
-                      },
-                      child: _buildGalleryCard(game),
-                    );
-                  },
+                          return Transform(
+                            transform: Matrix4.identity()
+                              ..setEntry(3, 2, 0.001)
+                              ..rotateY(rotation)
+                              ..scale(distortion),
+                            alignment: Alignment.center,
+                            child: child,
+                          );
+                        },
+                        child: _buildGalleryCard(game),
+                      );
+                    },
+                  ),
                 ),
               ),
-            ),
 
-            // LEFT Navigation Button (Overlay)
-            Positioned(
-              left: 0,
-              top: 0,
-              bottom: 120,
-              child: IconButton(
-                icon: Icon(
-                  Icons.arrow_back_ios,
-                  color: AppColors.textPrimary,
-                  size: 30,
-                ),
-                onPressed: _goToPreviousPage,
-                splashRadius: 20,
-              ),
-            ),
-
-            // RIGHT Navigation Button (Overlay)
-            Positioned(
-              right: 0,
-              top: 0,
-              bottom: 120,
-              child: IconButton(
-                icon: Icon(
-                  Icons.arrow_forward_ios,
-                  color: AppColors.textPrimary,
-                  size: 30,
-                ),
-                onPressed: _goToNextPage,
-                splashRadius: 20,
-              ),
-            ),
-
-            // Hint Text
-            Positioned(
-              bottom: 40,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: Text(
-                  "Swipe or Click arrows to explore",
-                  style: TextStyle(color: AppColors.textTertiary, fontSize: 12),
+              // LEFT Navigation Button (Overlay)
+              Positioned(
+                left: 0,
+                top: 0,
+                bottom: 120,
+                child: IconButton(
+                  icon: Icon(
+                    Icons.arrow_back_ios,
+                    color: AppColors.textPrimary,
+                    size: 30,
+                  ),
+                  onPressed: _goToPreviousPage,
+                  splashRadius: 20,
                 ),
               ),
-            ),
+
+              // RIGHT Navigation Button (Overlay)
+              Positioned(
+                right: 0,
+                top: 0,
+                bottom: 120,
+                child: IconButton(
+                  icon: Icon(
+                    Icons.arrow_forward_ios,
+                    color: AppColors.textPrimary,
+                    size: 30,
+                  ),
+                  onPressed: _goToNextPage,
+                  splashRadius: 20,
+                ),
+              ),
+
+              // Hint Text
+              Positioned(
+                bottom: 40,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: Text(
+                    "Swipe or Click arrows to explore",
+                    style: TextStyle(
+                      color: AppColors.textTertiary,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
         );
