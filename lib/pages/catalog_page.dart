@@ -245,11 +245,10 @@ class _CatalogPageState extends State<CatalogPage> {
                         padding: const EdgeInsets.all(AppSpacing.lg),
                         physics: const BouncingScrollPhysics(),
                         gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2,
+                            const SliverGridDelegateWithMaxCrossAxisExtent(
+                              maxCrossAxisExtent: 200,
                               crossAxisSpacing: AppSpacing.lg,
                               mainAxisSpacing: AppSpacing.lg,
-                              childAspectRatio: 0.7,
                             ),
                         itemCount: filteredGames.length,
                         itemBuilder: (context, index) {

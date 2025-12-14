@@ -32,6 +32,7 @@ class GameCatalogCard extends StatelessWidget {
         ],
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Stack(
@@ -44,11 +45,11 @@ class GameCatalogCard extends StatelessWidget {
                   game.thumbnailUrl.isEmpty
                       ? 'https://via.placeholder.com/300'
                       : game.thumbnailUrl,
-                  height: 120,
+                  height: 80,
                   width: double.infinity,
                   fit: BoxFit.cover,
                   errorBuilder: (context, error, stackTrace) => Container(
-                    height: 120,
+                    height: 80,
                     width: double.infinity,
                     color: AppColors.surface,
                     child: Center(
@@ -74,8 +75,9 @@ class GameCatalogCard extends StatelessWidget {
           ),
 
           Padding(
-            padding: const EdgeInsets.all(8.0),
+            padding: const EdgeInsets.fromLTRB(5.0, 3.0, 5.0, 3.0),
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
@@ -85,30 +87,43 @@ class GameCatalogCard extends StatelessWidget {
                   style: TextStyle(
                     color: AppColors.textPrimary,
                     fontWeight: FontWeight.bold,
-                    fontSize: 16,
+                    fontSize: 12,
+                    height: 1.1,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 1),
                 Text(
                   game.category,
-                  style: TextStyle(color: AppColors.textTertiary, fontSize: 12),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: AppColors.textTertiary,
+                    fontSize: 9,
+                    height: 1.0,
+                  ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 2),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      '${game.minPlayers}-${game.maxPlayers} players',
-                      style: TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 12,
+                    Expanded(
+                      child: Text(
+                        '${game.minPlayers}-${game.maxPlayers}p',
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 9,
+                          height: 1.0,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
+                    const SizedBox(width: 2),
                     Text(
-                      '${game.playerTime} min',
+                      '${game.playerTime}m',
                       style: TextStyle(
                         color: AppColors.textSecondary,
-                        fontSize: 12,
+                        fontSize: 9,
+                        height: 1.0,
                       ),
                     ),
                   ],

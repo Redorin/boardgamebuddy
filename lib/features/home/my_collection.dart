@@ -222,21 +222,16 @@ class _MyCollectionPageState extends State<MyCollectionPage> {
                 Expanded(
                   child: TextField(
                     controller: _searchController,
-                    style: TextStyle(
+                    style: GoogleFonts.poppins(
                       color: AppColors.textPrimary,
                       fontSize: 14,
-                      fontFamily: 'Courier New',
                       fontWeight: FontWeight.w500,
                     ),
-                    textAlign: TextAlign.center,
                     decoration: InputDecoration(
-                      hintText: "SEARCH YOUR COLLECTION...",
-                      hintStyle: TextStyle(
+                      hintText: "Search your collection...",
+                      hintStyle: GoogleFonts.poppins(
                         color: grayText,
-                        fontSize: 12,
-                        fontFamily: 'Courier New',
-                        letterSpacing: 1.0,
-                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
                       ),
                       prefixIcon: Icon(
                         LucideIcons.search,
@@ -246,28 +241,28 @@ class _MyCollectionPageState extends State<MyCollectionPage> {
                       filled: true,
                       fillColor: inputBg,
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.zero,
+                        borderRadius: BorderRadius.circular(8),
                         borderSide: BorderSide(
                           color: AppColors.primary,
-                          width: 2,
+                          width: 1.5,
                         ),
                       ),
                       enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.zero,
+                        borderRadius: BorderRadius.circular(8),
                         borderSide: BorderSide(
-                          color: AppColors.primary,
-                          width: 2,
+                          color: AppColors.primary.withOpacity(0.3),
+                          width: 1.5,
                         ),
                       ),
                       focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.zero,
+                        borderRadius: BorderRadius.circular(8),
                         borderSide: BorderSide(
                           color: AppColors.accent,
-                          width: 3,
+                          width: 2,
                         ),
                       ),
                       contentPadding: const EdgeInsets.symmetric(
-                        vertical: 14,
+                        vertical: 12,
                         horizontal: 16,
                       ),
                     ),

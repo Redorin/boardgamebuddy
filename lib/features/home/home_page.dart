@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../shared/config/app_theme.dart';
+import '../../shared/widgets/app_background.dart';
 import '../../core/services/game_service.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/models/board_game.dart';
@@ -94,45 +95,89 @@ class _HomePageState extends State<HomePage> {
               child: BottomNavigationBar(
                 backgroundColor: Colors.transparent,
                 elevation: 0,
-                selectedItemColor: AppColors.primary,
-                unselectedItemColor: AppColors.textTertiary,
+                selectedItemColor: AppColors.accent,
+                unselectedItemColor: AppColors.textTertiary.withOpacity(0.5),
                 currentIndex: _selectedIndex,
                 onTap: _onItemTapped,
                 type: BottomNavigationBarType.fixed,
+                selectedLabelStyle: GoogleFonts.poppins(
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.accent,
+                ),
+                unselectedLabelStyle: GoogleFonts.poppins(
+                  fontWeight: FontWeight.normal,
+                  color: AppColors.textTertiary,
+                ),
                 items: [
                   BottomNavigationBarItem(
                     icon: AnimatedScale(
-                      scale: _selectedIndex == 0 ? 1.12 : 1.0,
+                      scale: _selectedIndex == 0 ? 1.15 : 1.0,
                       duration: const Duration(milliseconds: 160),
                       curve: Curves.easeOut,
-                      child: const Icon(Icons.search),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: _selectedIndex == 0
+                              ? AppColors.accent.withOpacity(0.2)
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        padding: const EdgeInsets.all(8),
+                        child: const Icon(Icons.search),
+                      ),
                     ),
                     label: "Discover",
                   ),
                   BottomNavigationBarItem(
                     icon: AnimatedScale(
-                      scale: _selectedIndex == 1 ? 1.12 : 1.0,
+                      scale: _selectedIndex == 1 ? 1.15 : 1.0,
                       duration: const Duration(milliseconds: 160),
                       curve: Curves.easeOut,
-                      child: const Icon(Icons.collections),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: _selectedIndex == 1
+                              ? AppColors.accent.withOpacity(0.2)
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        padding: const EdgeInsets.all(8),
+                        child: const Icon(Icons.collections),
+                      ),
                     ),
                     label: "Collection",
                   ),
                   BottomNavigationBarItem(
                     icon: AnimatedScale(
-                      scale: _selectedIndex == 2 ? 1.12 : 1.0,
+                      scale: _selectedIndex == 2 ? 1.15 : 1.0,
                       duration: const Duration(milliseconds: 160),
                       curve: Curves.easeOut,
-                      child: const Icon(Icons.group),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: _selectedIndex == 2
+                              ? AppColors.accent.withOpacity(0.2)
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        padding: const EdgeInsets.all(8),
+                        child: const Icon(Icons.group),
+                      ),
                     ),
                     label: "Friends",
                   ),
                   BottomNavigationBarItem(
                     icon: AnimatedScale(
-                      scale: _selectedIndex == 3 ? 1.12 : 1.0,
+                      scale: _selectedIndex == 3 ? 1.15 : 1.0,
                       duration: const Duration(milliseconds: 160),
                       curve: Curves.easeOut,
-                      child: const Icon(Icons.person),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: _selectedIndex == 3
+                              ? AppColors.accent.withOpacity(0.2)
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        padding: const EdgeInsets.all(8),
+                        child: const Icon(Icons.person),
+                      ),
                     ),
                     label: "Profile",
                   ),
@@ -206,36 +251,37 @@ class _DiscoverPageState extends State<DiscoverPage> {
 
         final virtualItemCount = games.length * 1000;
 
-        return Stack(
-          children: [
-            // Background Title
-            Positioned(
-              top: 60,
-              left: 20,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "Board Games",
-                    style: GoogleFonts.poppins(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary,
+        return AppBackground(
+          child: Stack(
+            children: [
+              // Background Title
+              Positioned(
+                top: 60,
+                left: 20,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Board Games",
+                      style: GoogleFonts.poppins(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                      ),
                     ),
-                  ),
-                  Text(
-                    "Discover new worlds",
-                    style: GoogleFonts.poppins(
-                      fontSize: 16,
-                      color: AppColors.textTertiary,
+                    Text(
+                      "Discover new worlds",
+                      style: GoogleFonts.poppins(
+                        fontSize: 16,
+                        color: AppColors.textTertiary,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
 
-            // The Circular/3D Gallery (Primary Content)
-            Center(
+              // The Circular/3D Gallery (Primary Content)
+              Center(
               child: SizedBox(
                 height: 500,
                 child: PageView.builder(
@@ -322,7 +368,8 @@ class _DiscoverPageState extends State<DiscoverPage> {
                 ),
               ),
             ),
-          ],
+            ],
+          ),
         );
       },
     );
