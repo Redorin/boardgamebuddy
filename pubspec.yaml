@@ -30,6 +30,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+
+  intl: ^0.18.0
   firebase_core: ^3.15.0 # check latest version
   firebase_database: ^11.0.0 # for Realtime Database
   # The following adds the Cupertino Icons font to your application.

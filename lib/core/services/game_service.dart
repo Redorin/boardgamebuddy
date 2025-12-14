@@ -1,3 +1,4 @@
+// lib/core/services/game_service.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:async';
@@ -107,18 +108,23 @@ class GameService {
     }
   }
 
-  /// GET USER'S GAMES
+  /// GET USER'S GAMES (FIX: Pass doc.id to the factory for correct model creation)
   static Stream<List<BoardGame>> getUserCollectionGames() {
     final userDocRef = _getUserDocRef();
     if (userDocRef == null) return Stream.value([]);
 
     return userDocRef
         .collection('collection')
-        .orderBy('added_at', descending: true)
+        // We rely on Firestore returning the data reliably without orderBy since we removed it in the last step.
         .snapshots()
         .map((collectionSnapshot) {
           return collectionSnapshot.docs
-              .map((doc) => BoardGame.fromFirestore(doc.data()))
+              .map((doc) {
+                // IMPORTANT FIX: Manually merge the document ID into the data map
+                final data = doc.data();
+                data['id'] = doc.id; 
+                return BoardGame.fromFirestore(data);
+              })
               .toList();
         });
   }

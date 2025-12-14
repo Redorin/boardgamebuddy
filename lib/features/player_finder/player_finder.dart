@@ -1,11 +1,15 @@
-// lib/features/player_finder/player_finder.dart (FINAL: FIXES BLANK AVATAR CRASH)
+// lib/features/player_finder/player_finder.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:intl/intl.dart'; 
 import '../../core/services/profile_service.dart';
 import '../profile/read_only_profile_page.dart';
+import '../../core/services/game_session_service.dart'; 
+import '../../core/models/game_session_invitation.dart'; 
+import 'ui/invite_to_game_dialog.dart'; 
 
 // --- Data Models (Keep these classes in your file) ---
 class PlayerDisplay {
@@ -42,6 +46,8 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
   bool _showOnlineOnly = false;
 
   final TextEditingController _searchController = TextEditingController();
+
+  final GameSessionService _gameSessionService = GameSessionService(); 
 
   @override
   void initState() {
@@ -80,7 +86,6 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
     );
   }
 
-  // 💡 NEW: Reusable widget for the default placeholder avatar
   Widget _buildDefaultAvatar() {
     return CircleAvatar(
       backgroundColor: Colors.deepPurple.shade700,
@@ -149,7 +154,6 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
     );
   }
 
-  // 💡 MODIFIED: _buildFriendsList (Implements Avatar URL Check)
   Widget _buildFriendsList() {
     return StreamBuilder<List<Map<String, dynamic>>>(
       stream: ProfileService.getFriendsStream(),
@@ -169,9 +173,6 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
 
         final friends = snapshot.data ?? [];
 
-        // 💡 DEBUG: Print the number of friends found to the console
-        print("DEBUG: Found ${friends.length} friends for current user.");
-
         if (friends.isEmpty) {
           return const Center(
             child: Text(
@@ -186,6 +187,8 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
           padding: const EdgeInsets.all(16),
           itemBuilder: (context, index) {
             final friend = friends[index];
+            final friendId = friend['id'] as String? ?? '0';
+            final friendName = friend['displayName'] as String? ?? 'Unknown';
             final friendImage = friend['profileImage'] as String? ?? '';
             final isUrlValid = friendImage.isNotEmpty;
 
@@ -195,7 +198,6 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: ListTile(
-                // 💡 FIX: Robust Image Handling
                 leading: isUrlValid
                     ? CircleAvatar(
                         backgroundImage: NetworkImage(friendImage),
@@ -212,22 +214,42 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
                         ),
                       ),
                 title: Text(
-                  friend['displayName'] ?? 'Unknown',
+                  friendName,
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                trailing: const Icon(
-                  Icons.chevron_right,
-                  color: Colors.white54,
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(LucideIcons.gamepad2,
+                          color: Colors.deepPurpleAccent),
+                      onPressed: () {
+                        showDialog(
+                          context: context,
+                          builder: (context) => InviteToGameDialog(
+                            inviteeId: friendId,
+                            inviteeName: friendName,
+                            inviteeImage: friendImage,
+                          ),
+                        );
+                      },
+                      tooltip: 'Invite to Game',
+                    ),
+                    const Icon(
+                      Icons.chevron_right,
+                      color: Colors.white54,
+                    ),
+                  ],
                 ),
                 onTap: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (context) =>
-                          ReadOnlyProfilePage(userId: friend['id']),
+                          ReadOnlyProfilePage(userId: friendId),
                     ),
                   );
                 },
@@ -239,7 +261,6 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
     );
   }
 
-  // 💡 MODIFIED: _buildRequestsList (Implements Avatar URL Check)
   Widget _buildRequestsList() {
     return StreamBuilder<List<Map<String, dynamic>>>(
       stream: ProfileService.getIncomingRequestsStream(),
@@ -275,15 +296,14 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: ListTile(
-                // 💡 FIX: Check URL before creating NetworkImage
                 leading: isUrlValid
                     ? CircleAvatar(
                         backgroundImage: NetworkImage(senderImage),
                         radius: 24,
                         onBackgroundImageError: (exception, stackTrace) =>
-                            {}, // Suppress crash on background image
+                            {},
                       )
-                    : _buildDefaultAvatar(), // Use default placeholder
+                    : _buildDefaultAvatar(),
                 title: Text(
                   senderName,
                   style: const TextStyle(
@@ -329,6 +349,132 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
                           );
                         }
                       },
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // NEW: Method to build the list of incoming game invitations
+  Widget _buildGameInvitationsTab() {
+    return StreamBuilder<List<GameSessionInvitation>>(
+      stream: _gameSessionService.getIncomingInvitationsStream(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return _buildSkeletonList();
+        }
+
+        if (snapshot.hasError) {
+          return Center(
+            child: Text(
+              'Error loading invitations: ${snapshot.error}',
+              style: const TextStyle(color: Colors.red),
+            ),
+          );
+        }
+
+        final invitations = snapshot.data ?? [];
+        if (invitations.isEmpty) {
+          return const Center(
+            child: Text(
+              "No pending game invitations.",
+              style: TextStyle(color: Colors.white54),
+            ),
+          );
+        }
+
+        return ListView.builder(
+          itemCount: invitations.length,
+          padding: const EdgeInsets.all(16),
+          itemBuilder: (context, index) {
+            final invite = invitations[index];
+            final isUrlValid = invite.inviterImage.isNotEmpty;
+            final DateFormat formatter = DateFormat('EEE, MMM d, h:mm a');
+            final dateTimeString = formatter.format(invite.sessionDate);
+
+            return Card(
+              color: const Color(0xFF171A21),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: ListTile(
+                leading: isUrlValid
+                    ? CircleAvatar(
+                        backgroundImage: NetworkImage(invite.inviterImage),
+                        radius: 24,
+                        onBackgroundImageError: (exception, stackTrace) =>
+                            {},
+                      )
+                    : _buildDefaultAvatar(),
+                title: Text(
+                  'Game Invitation from ${invite.inviterName}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Game: ${invite.gameName}',
+                      style: const TextStyle(color: Colors.white70),
+                    ),
+                    Text(
+                      'When: $dateTimeString',
+                      style: const TextStyle(color: Colors.white70),
+                    ),
+                    Text(
+                      'Where: ${invite.sessionLocation}',
+                      style: const TextStyle(color: Colors.white70),
+                    ),
+                  ],
+                ),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Accept Button
+                    IconButton(
+                      icon: const Icon(Icons.check, color: Colors.green),
+                      onPressed: () async {
+                        await _gameSessionService.respondToInvitation(
+                          invite.id,
+                          InvitationStatus.accepted,
+                        );
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                  "Accepted invitation for ${invite.gameName}!"),
+                            ),
+                          );
+                        }
+                      },
+                      tooltip: 'Accept',
+                    ),
+                    // Reject Button
+                    IconButton(
+                      icon: const Icon(Icons.close, color: Colors.red),
+                      onPressed: () async {
+                        await _gameSessionService.respondToInvitation(
+                          invite.id,
+                          InvitationStatus.rejected,
+                        );
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                  "Declined invitation for ${invite.gameName}."),
+                              ),
+                          );
+                        }
+                      },
+                      tooltip: 'Reject',
                     ),
                   ],
                 ),
@@ -439,7 +585,7 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 3,
+      length: 4, 
       child: Scaffold(
         backgroundColor: const Color(0xff0E141B),
         appBar: AppBar(
@@ -454,6 +600,7 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
               Tab(text: "Find Players"),
               Tab(text: "My Friends"),
               Tab(text: "Requests"),
+              Tab(text: "Game Invites"), 
             ],
           ),
         ),
@@ -462,6 +609,7 @@ class _PlayerFinderPageState extends State<PlayerFinderPage> {
             _buildFindPlayersTab(),
             _buildFriendsList(),
             _buildRequestsList(),
+            _buildGameInvitationsTab(), 
           ],
         ),
       ),
