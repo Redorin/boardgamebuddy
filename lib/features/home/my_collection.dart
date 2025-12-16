@@ -1,9 +1,9 @@
-// lib/features/home/my_collection.dart (UPDATED with Shimmer Skeletons)
+// lib/features/home/my_collection.dart
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:async';
 import 'package:lucide_icons/lucide_icons.dart';
-import 'package:shimmer/shimmer.dart'; // 💡 NEW: For skeleton loading
+import 'package:shimmer/shimmer.dart'; 
 import '../../core/services/game_service.dart';
 import '../../core/models/board_game.dart';
 import '../../shared/config/app_theme.dart';
@@ -25,9 +25,14 @@ class _MyCollectionPageState extends State<MyCollectionPage> {
   CollectionViewMode _viewMode = CollectionViewMode.grid;
 
   Timer? _debounce;
-  // Define Shimmer Colors for dark theme consistency
+  
+  // Define Colors locally to match your design
   static const Color _shimmerBaseColor = Color(0xFF171A21);
   static const Color _shimmerHighlightColor = Color(0xFF2A3F5F);
+  static const Color _headerBg = Color(0xFF171A21);
+  static const Color _borderColor = Color(0xFF2A3F5F);
+  static const Color _inputBg = Color(0xFF0E141B);
+  static const Color _grayText = Color(0xFF8F98A0);
 
   @override
   void initState() {
@@ -59,7 +64,8 @@ class _MyCollectionPageState extends State<MyCollectionPage> {
     super.dispose();
   }
 
-  // 💡 NEW: Skeleton Tile for Grid View
+  // --- Skeleton Widgets ---
+
   Widget _buildSkeletonGridCard() {
     return Container(
       decoration: BoxDecoration(
@@ -70,25 +76,15 @@ class _MyCollectionPageState extends State<MyCollectionPage> {
         borderRadius: BorderRadius.circular(8),
         child: Column(
           children: [
-            Expanded(
-              child: Container(color: _shimmerHighlightColor),
-            ), // Placeholder image area
+            Expanded(child: Container(color: _shimmerHighlightColor)), 
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    height: 14,
-                    width: double.infinity,
-                    color: _shimmerHighlightColor,
-                  ), // Placeholder Title
+                  Container(height: 14, width: double.infinity, color: _shimmerHighlightColor),
                   const SizedBox(height: 8),
-                  Container(
-                    height: 10,
-                    width: 80,
-                    color: _shimmerHighlightColor,
-                  ), // Placeholder Info
+                  Container(height: 10, width: 80, color: _shimmerHighlightColor),
                 ],
               ),
             ),
@@ -98,7 +94,6 @@ class _MyCollectionPageState extends State<MyCollectionPage> {
     );
   }
 
-  // 💡 NEW: Skeleton Tile for List View
   Widget _buildSkeletonListTile() {
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
@@ -109,26 +104,17 @@ class _MyCollectionPageState extends State<MyCollectionPage> {
         contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
         leading: ClipRRect(
           borderRadius: BorderRadius.circular(8),
-          child: Container(
-            width: 60,
-            height: 60,
-            color: _shimmerHighlightColor,
-          ),
+          child: Container(width: 60, height: 60, color: _shimmerHighlightColor),
         ),
         title: Container(height: 14, width: 150, color: _shimmerHighlightColor),
         subtitle: Padding(
           padding: const EdgeInsets.only(top: 8.0),
-          child: Container(
-            height: 10,
-            width: 100,
-            color: _shimmerHighlightColor,
-          ),
+          child: Container(height: 10, width: 100, color: _shimmerHighlightColor),
         ),
       ),
     );
   }
 
-  // 💡 NEW: Shimmer Wrapper View
   Widget _buildSkeletonView() {
     return Shimmer.fromColors(
       baseColor: _shimmerBaseColor,
@@ -138,22 +124,17 @@ class _MyCollectionPageState extends State<MyCollectionPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              height: 14,
-              width: 150,
-              color: _shimmerHighlightColor,
-            ), // Placeholder for "X games in collection"
+            Container(height: 14, width: 150, color: _shimmerHighlightColor),
             const SizedBox(height: 12),
             Expanded(
               child: _viewMode == CollectionViewMode.grid
                   ? GridView.builder(
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            mainAxisSpacing: 16,
-                            crossAxisSpacing: 16,
-                            childAspectRatio: 2 / 3,
-                          ),
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        mainAxisSpacing: 16,
+                        crossAxisSpacing: 16,
+                        childAspectRatio: 2 / 3,
+                      ),
                       itemCount: 6,
                       itemBuilder: (_, i) => _buildSkeletonGridCard(),
                     )
@@ -168,181 +149,12 @@ class _MyCollectionPageState extends State<MyCollectionPage> {
     );
   }
 
-  Widget _buildCollectionsHeader(BuildContext context) {
-    const Color headerBg = Color(0xFF171A21);
-    const Color borderColor = Color(0xFF2A3F5F);
-    const Color inputBg = Color(0xFF0E141B);
-    const Color grayText = Color(0xFF8F98A0);
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
-      decoration: const BoxDecoration(
-        color: headerBg,
-        border: Border(bottom: BorderSide(color: borderColor, width: 1.0)),
-      ),
-      child: SafeArea(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  "My Collection",
-                  style: GoogleFonts.poppins(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                ElevatedButton(
-                  onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const CatalogPage()),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: borderColor,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    textStyle: const TextStyle(fontSize: 14),
-                  ),
-                  child: const Text("Add Game"),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _searchController,
-                    style: GoogleFonts.poppins(
-                      color: AppColors.textPrimary,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                    ),
-                    decoration: InputDecoration(
-                      hintText: "Search your collection...",
-                      hintStyle: GoogleFonts.poppins(
-                        color: grayText,
-                        fontSize: 14,
-                      ),
-                      prefixIcon: Icon(
-                        LucideIcons.search,
-                        size: 16,
-                        color: AppColors.accent,
-                      ),
-                      filled: true,
-                      fillColor: inputBg,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(
-                          color: AppColors.primary,
-                          width: 1.5,
-                        ),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(
-                          color: AppColors.primary.withOpacity(0.3),
-                          width: 1.5,
-                        ),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(
-                          color: AppColors.accent,
-                          width: 2,
-                        ),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        vertical: 12,
-                        horizontal: 16,
-                      ),
-                    ),
-                    textInputAction: TextInputAction.search,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                SizedBox(
-                  height: 40,
-                  child: Row(
-                    children: [
-                      // REMOVED: IconButton (Filter/Sliders) was here
-                      Container(
-                        decoration: BoxDecoration(
-                          color: inputBg,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: borderColor),
-                        ),
-                        child: Row(
-                          children: [
-                            GestureDetector(
-                              onTap: () =>
-                                  _toggleViewMode(CollectionViewMode.grid),
-                              child: Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: _viewMode == CollectionViewMode.grid
-                                      ? borderColor
-                                      : inputBg,
-                                  borderRadius: BorderRadius.circular(7),
-                                ),
-                                child: Icon(
-                                  LucideIcons.layoutGrid,
-                                  size: 16,
-                                  color: _viewMode == CollectionViewMode.grid
-                                      ? Colors.white
-                                      : grayText,
-                                ),
-                              ),
-                            ),
-                            GestureDetector(
-                              onTap: () =>
-                                  _toggleViewMode(CollectionViewMode.list),
-                              child: Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: _viewMode == CollectionViewMode.list
-                                      ? borderColor
-                                      : inputBg,
-                                  borderRadius: BorderRadius.circular(7),
-                                ),
-                                child: Icon(
-                                  LucideIcons.list,
-                                  size: 16,
-                                  color: _viewMode == CollectionViewMode.list
-                                      ? Colors.white
-                                      : grayText,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
-    );
-  }
+  // --- Main Content ---
 
   Widget _buildGameGrid() {
     return StreamBuilder<List<BoardGame>>(
       stream: GameService.getUserCollectionGames(),
       builder: (context, snapshot) {
-        // 🛑 NEW: Show the skeleton view while loading
         if (snapshot.connectionState == ConnectionState.waiting) {
           return _buildSkeletonView();
         }
@@ -367,20 +179,14 @@ class _MyCollectionPageState extends State<MyCollectionPage> {
           return Center(
             child: Text(
               "No games found matching '$_searchQuery'.",
-              style: GoogleFonts.poppins(
-                color: const Color(0xFF8F98A0),
-                fontSize: 16,
-              ),
+              style: GoogleFonts.poppins(color: _grayText, fontSize: 16),
             ),
           );
         } else if (games.isEmpty) {
           return Center(
             child: Text(
               "Your collection is empty. Add some games!",
-              style: GoogleFonts.poppins(
-                color: const Color(0xFF8F98A0),
-                fontSize: 16,
-              ),
+              style: GoogleFonts.poppins(color: _grayText, fontSize: 16),
             ),
           );
         }
@@ -392,26 +198,24 @@ class _MyCollectionPageState extends State<MyCollectionPage> {
             children: [
               Text(
                 "${filteredGames.length} games in collection",
-                style: const TextStyle(color: Color(0xFF8F98A0), fontSize: 14),
+                style: const TextStyle(color: _grayText, fontSize: 14),
               ),
               const SizedBox(height: 12),
               Expanded(
                 child: _viewMode == CollectionViewMode.grid
                     ? GridView.builder(
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2,
-                              mainAxisSpacing: 16,
-                              crossAxisSpacing: 16,
-                              childAspectRatio: 2 / 3,
-                            ),
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          mainAxisSpacing: 16,
+                          crossAxisSpacing: 16,
+                          childAspectRatio: 2 / 3,
+                        ),
                         itemCount: filteredGames.length,
                         itemBuilder: (_, i) => _buildGameCard(filteredGames[i]),
                       )
                     : ListView.builder(
                         itemCount: filteredGames.length,
-                        itemBuilder: (_, i) =>
-                            _buildGameListTile(filteredGames[i]),
+                        itemBuilder: (_, i) => _buildGameListTile(filteredGames[i]),
                       ),
               ),
             ],
@@ -465,11 +269,7 @@ class _MyCollectionPageState extends State<MyCollectionPage> {
                 child: Container(
                   decoration: const BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [
-                        Colors.transparent,
-                        Colors.black54,
-                        Colors.black,
-                      ],
+                      colors: [Colors.transparent, Colors.black54, Colors.black],
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       stops: [0.5, 0.8, 1.0],
@@ -478,9 +278,7 @@ class _MyCollectionPageState extends State<MyCollectionPage> {
                 ),
               ),
               Positioned(
-                bottom: 0,
-                left: 0,
-                right: 0,
+                bottom: 0, left: 0, right: 0,
                 child: Padding(
                   padding: const EdgeInsets.all(8.0),
                   child: Column(
@@ -497,14 +295,8 @@ class _MyCollectionPageState extends State<MyCollectionPage> {
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 4),
-                      _buildInfoRow(
-                        LucideIcons.users,
-                        '${game.minPlayers}-${game.maxPlayers} Players',
-                      ),
-                      _buildInfoRow(
-                        LucideIcons.clock,
-                        '${game.playerTime} min',
-                      ),
+                      _buildInfoRow(LucideIcons.users, '${game.minPlayers}-${game.maxPlayers} Players'),
+                      _buildInfoRow(LucideIcons.clock, '${game.playerTime} min'),
                     ],
                   ),
                 ),
@@ -532,22 +324,14 @@ class _MyCollectionPageState extends State<MyCollectionPage> {
         elevation: 0,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         child: ListTile(
-          contentPadding: const EdgeInsets.symmetric(
-            vertical: 8,
-            horizontal: 16,
-          ),
+          contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
           leading: ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: Image.network(
-              game.thumbnailUrl.isEmpty
-                  ? 'https://via.placeholder.com/60'
-                  : game.thumbnailUrl,
-              width: 60,
-              height: 60,
-              fit: BoxFit.cover,
+              game.thumbnailUrl.isEmpty ? 'https://via.placeholder.com/60' : game.thumbnailUrl,
+              width: 60, height: 60, fit: BoxFit.cover,
               errorBuilder: (c, o, s) => Container(
-                width: 60,
-                height: 60,
+                width: 60, height: 60,
                 color: Colors.grey[700],
                 child: const Icon(Icons.category, color: Colors.white54),
               ),
@@ -555,33 +339,24 @@ class _MyCollectionPageState extends State<MyCollectionPage> {
           ),
           title: Text(
             game.name,
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
+            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
           ),
           subtitle: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                game.category,
-                style: const TextStyle(color: Color(0xFF8F98A0), fontSize: 12),
-              ),
+              Text(game.category, style: const TextStyle(color: _grayText, fontSize: 12)),
               const SizedBox(height: 4),
               Row(
                 children: [
                   _buildInfoRow(LucideIcons.clock, '${game.playerTime} min'),
                   const SizedBox(width: 12),
-                  _buildInfoRow(
-                    LucideIcons.users,
-                    '${game.minPlayers}-${game.maxPlayers}',
-                  ),
+                  _buildInfoRow(LucideIcons.users, '${game.minPlayers}-${game.maxPlayers}'),
                 ],
               ),
             ],
           ),
-          trailing: const Icon(Icons.chevron_right, color: Color(0xFF8F98A0)),
+          trailing: const Icon(Icons.chevron_right, color: _grayText),
         ),
       ),
     );
@@ -590,12 +365,9 @@ class _MyCollectionPageState extends State<MyCollectionPage> {
   Widget _buildInfoRow(IconData icon, String text) {
     return Row(
       children: [
-        Icon(icon, size: 12, color: const Color(0xFF8F98A0)),
+        Icon(icon, size: 12, color: _grayText),
         const SizedBox(width: 4),
-        Text(
-          text,
-          style: const TextStyle(color: Color(0xFF8F98A0), fontSize: 10),
-        ),
+        Text(text, style: const TextStyle(color: _grayText, fontSize: 10)),
       ],
     );
   }
@@ -603,6 +375,7 @@ class _MyCollectionPageState extends State<MyCollectionPage> {
   @override
   Widget build(BuildContext context) {
     const Color primaryBackgroundColor = Color(0xFF0E141B);
+    
     return Scaffold(
       backgroundColor: primaryBackgroundColor,
       body: NestedScrollView(
@@ -610,13 +383,128 @@ class _MyCollectionPageState extends State<MyCollectionPage> {
           return [
             SliverAppBar(
               automaticallyImplyLeading: false,
-              expandedHeight: 130.0,
               pinned: true,
               floating: true,
-              backgroundColor: primaryBackgroundColor,
-              flexibleSpace: FlexibleSpaceBar(
-                collapseMode: CollapseMode.pin,
-                background: _buildCollectionsHeader(context),
+              backgroundColor: _headerBg,
+              elevation: 0,
+              // FIX: Use title for the top row so it remains visible and interactive
+              title: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    "My Collection",
+                    style: GoogleFonts.poppins(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  ElevatedButton(
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const CatalogPage()),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _borderColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      textStyle: const TextStyle(fontSize: 14),
+                    ),
+                    child: const Text("Add Game"),
+                  ),
+                ],
+              ),
+              // FIX: Use bottom for the search bar so it is not hidden/clipped by FlexibleSpaceBar
+              bottom: PreferredSize(
+                preferredSize: const Size.fromHeight(60), // Space for search bar + padding
+                child: Container(
+                  padding: const EdgeInsets.only(left: 16.0, right: 16.0, bottom: 12.0),
+                  decoration: const BoxDecoration(
+                    color: _headerBg,
+                    border: Border(bottom: BorderSide(color: _borderColor, width: 1.0)),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _searchController,
+                          style: GoogleFonts.poppins(
+                            color: AppColors.textPrimary,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          decoration: InputDecoration(
+                            hintText: "Search your collection...",
+                            hintStyle: GoogleFonts.poppins(color: _grayText, fontSize: 14),
+                            prefixIcon: Icon(LucideIcons.search, size: 16, color: AppColors.accent),
+                            filled: true,
+                            fillColor: _inputBg,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(color: AppColors.primary, width: 1.5),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(color: AppColors.primary.withOpacity(0.3), width: 1.5),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(color: AppColors.accent, width: 2),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                          ),
+                          textInputAction: TextInputAction.search,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      SizedBox(
+                        height: 40,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: _inputBg,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: _borderColor),
+                          ),
+                          child: Row(
+                            children: [
+                              GestureDetector(
+                                onTap: () => _toggleViewMode(CollectionViewMode.grid),
+                                child: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: _viewMode == CollectionViewMode.grid ? _borderColor : _inputBg,
+                                    borderRadius: BorderRadius.circular(7),
+                                  ),
+                                  child: Icon(
+                                    LucideIcons.layoutGrid,
+                                    size: 16,
+                                    color: _viewMode == CollectionViewMode.grid ? Colors.white : _grayText,
+                                  ),
+                                ),
+                              ),
+                              GestureDetector(
+                                onTap: () => _toggleViewMode(CollectionViewMode.list),
+                                child: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: _viewMode == CollectionViewMode.list ? _borderColor : _inputBg,
+                                    borderRadius: BorderRadius.circular(7),
+                                  ),
+                                  child: Icon(
+                                    LucideIcons.list,
+                                    size: 16,
+                                    color: _viewMode == CollectionViewMode.list ? Colors.white : _grayText,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
           ];

@@ -1,9 +1,8 @@
-// lib/features/player_finder/ui/invite_to_game_dialog.dart
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../../../core/models/board_game.dart'; 
+import '../../../core/models/board_game.dart';
 import '../../../core/services/game_session_service.dart';
-import '../../../core/services/game_service.dart'; 
+import '../../../core/services/game_service.dart';
 
 class InviteToGameDialog extends StatefulWidget {
   final String inviteeId;
@@ -23,7 +22,10 @@ class InviteToGameDialog extends StatefulWidget {
 
 class _InviteToGameDialogState extends State<InviteToGameDialog> {
   final GameSessionService _sessionService = GameSessionService();
+  
+  // We keep the selected game object for the invite logic
   BoardGame? _selectedGame;
+  
   DateTime _selectedDate = DateTime.now();
   TimeOfDay _selectedTime = TimeOfDay.now();
   final TextEditingController _locationController =
@@ -149,8 +151,12 @@ class _InviteToGameDialogState extends State<InviteToGameDialog> {
           children: <Widget>[
             const Text('Select a Game from Your Collection:',
                 style: TextStyle(color: Colors.white70)),
+            
+            // -----------------------------------------------------------------
+            // FIX: Robust Dropdown Logic
+            // -----------------------------------------------------------------
             StreamBuilder<List<BoardGame>>(
-              stream: GameService.getUserCollectionGames(), 
+              stream: GameService.getUserCollectionGames(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(
@@ -161,34 +167,60 @@ class _InviteToGameDialogState extends State<InviteToGameDialog> {
                   return Text('Error loading games: ${snapshot.error}',
                       style: const TextStyle(color: Colors.red));
                 }
+                
                 final games = snapshot.data ?? [];
+                
                 if (games.isEmpty) {
-                  return const Text('You have no games in your collection.',
-                      style: TextStyle(color: Colors.white54));
+                  return const Padding(
+                    padding: EdgeInsets.only(top: 8.0),
+                    child: Text('You have no games in your collection.',
+                        style: TextStyle(color: Colors.white54)),
+                  );
                 }
 
-                if (_selectedGame == null || !games.contains(_selectedGame)) {
-                  _selectedGame = games.first;
+                // 1. Remove duplicate games (by ID) to prevent crashes
+                final uniqueGamesMap = <String, BoardGame>{};
+                for (var game in games) {
+                  uniqueGamesMap[game.id] = game;
                 }
+                final uniqueGames = uniqueGamesMap.values.toList();
 
-                return DropdownButtonFormField<BoardGame>(
+                // 2. Validate Selection
+                // We check if the currently selected ID actually exists in the new list
+                final bool isSelectionValid = _selectedGame != null && 
+                    uniqueGamesMap.containsKey(_selectedGame!.id);
+
+                // If invalid or null, we don't force a reset immediately inside build 
+                // (which causes the loop). We just let the dropdown render with a 
+                // null value or the valid value.
+                
+                // We use String (ID) as the value for the Dropdown, not the object.
+                final String? currentDropdownValue = isSelectionValid 
+                    ? _selectedGame!.id 
+                    : null;
+
+                return DropdownButtonFormField<String>(
                   dropdownColor: const Color(0xFF171A21),
-                  value: _selectedGame,
+                  value: currentDropdownValue,
                   hint: const Text('Choose a game',
                       style: TextStyle(color: Colors.white54)),
-                  items: games.map((game) {
-                    return DropdownMenuItem(
-                      value: game,
+                  items: uniqueGames.map((game) {
+                    return DropdownMenuItem<String>(
+                      value: game.id, // Store ID, not Object
                       child: Text(
                         game.name,
                         style: const TextStyle(color: Colors.white),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     );
                   }).toList(),
-                  onChanged: (BoardGame? newValue) {
-                    setState(() {
-                      _selectedGame = newValue;
-                    });
+                  onChanged: (String? newGameId) {
+                    // When ID changes, we look up the full object
+                    if (newGameId != null) {
+                      setState(() {
+                        _selectedGame = uniqueGamesMap[newGameId];
+                      });
+                    }
                   },
                   decoration: InputDecoration(
                     contentPadding: const EdgeInsets.symmetric(horizontal: 10),
@@ -206,6 +238,7 @@ class _InviteToGameDialogState extends State<InviteToGameDialog> {
                 );
               },
             ),
+            
             const SizedBox(height: 16),
             const Text('Session Details:',
                 style: TextStyle(color: Colors.white70)),
